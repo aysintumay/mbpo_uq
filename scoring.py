@@ -1,4 +1,4 @@
-
+import argparse
 import csv
 import os
 import re
@@ -40,7 +40,7 @@ def convert_tfenvents_to_csv(root_dir, xlabel, ylabel, ylabel2):
             # csv.writer(open(output_file, 'w')).writerows(content)
             
 
-            for test_rew in ea.scalars.Items(ylabel2):
+            for test_rew in ea.scalars.Items('eval/'+ylabel2):
                 content[1].extend([round(test_rew.value, 4)])
             csv.writer(open(output_file, 'w')).writerows(content)
             result[output_file] = content
@@ -73,8 +73,8 @@ def crps_evaluation(samples, y_true):
     """
     Calculate pointwise CRPS
     """
-    e_x_y = np.mean(np.abs(samples - y_true), axis=0)
-    e_x_x_prime = np.mean([np.abs(si - sj) for i, si in enumerate(samples) for j, sj in enumerate(samples) if i != j])
+    e_x_y = np.mean(np.abs(samples.reshape(-1,1) - y_true.reshape(-1,1)), axis=0)
+    e_x_x_prime = np.mean([np.abs(si - sj) for i, si in enumerate(samples.reshape(-1,1)) for j, sj in enumerate(samples.reshape(-1,1)) if i != j])
     crps = e_x_y - 0.5 * e_x_x_prime
     crps_ed = crps
 
@@ -86,3 +86,52 @@ def crps_evaluation(samples, y_true):
     #                        std_ed_2).mean()
     return crps_ed
 
+def get_returns(log_path, i):
+
+    """ 
+    at the end of each test run, tfevents is generated
+    convert tfevents to csv
+    seed_a>ite_i>offline or online> all docs
+    generate csv for each ite
+    generate merged csv for all iterations
+    """
+
+    path = os.path.join(log_path, 'test',  f'ite_{i}', args.mode)
+    result = convert_tfenvents_to_csv(path, args.xlabel, args.ylabel, args.ylabel2 )
+    merge_csv(result, path, args.xlabel, args.ylabel, args.ylabel2)
+
+
+if __name__ == "__main__":
+
+
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument(
+        '--root-dir', 
+        #default='log/hopper-medium-replay-v0/mopo',
+         default='log', help='root dir'
+    )
+   
+    parser.add_argument(
+        '--algos', default="mopo", help='algos'
+    )
+    
+    parser.add_argument(
+        '--xlabel', default='Timesteps', help='matplotlib figure xlabel'
+    )
+    parser.add_argument(
+        '--ylabel', default='episode_reward', help='matplotlib figure ylabel'
+    )
+
+    parser.add_argument(
+        '--ylabel2', default='episode_accuracy', help='matplotlib figure ylabel'
+    )
+
+    parser.add_argument("--log_path" , type=str, default="")
+
+
+    args = parser.parse_args()
+
+
+    for i in range(3):
+        get_returns(args.log_path, i)

@@ -20,6 +20,8 @@ from common.logger import Logger
 from trainer import Trainer
 from common.util import set_device_and_logger
 
+import warnings
+warnings.filterwarnings("ignore")
 
 def main(args):
 
@@ -45,23 +47,26 @@ def main(args):
     writer.add_text("args", str(args))
     logger = Logger(writer=writer,log_path=log_path)
 
-    Devid = 0 if args.device == 'cuda' else -1
+    Devid = args.cuda_number if args.device == 'cuda' else -1
     set_device_and_logger(Devid,logger)
 
     iterations = 3
 
     for i in range(iterations):
-
+        
+        print(f"====================Iteration {i+1}====================")
         if i == 0:
             args.pretrained = False
+            offline_buffer_train = None
+            offline_buffer_test = None
             # train_args.replay = False
         else:
             args.pretrained = True
             # train_args.replay = True
 
-
+        args.pretrained = True     #to be fast 
         #train on offline dataset or replayed dataset
-        train(logger, args, offline_buffer_train if offline_buffer_train is not None else None, )
+        train(logger, run, args, offline_buffer_train if offline_buffer_train is not None else None, )
 
         #get renewed train dataset of 50k
         args.eval_episodes = 50000
@@ -69,22 +74,22 @@ def main(args):
         args.policy_path = args.policy_path
 
         args.mode = 'offline'
-        dataset_train = test(i, args, offline_buffer_train if offline_buffer_train is not None else None, log_path)
-        get_returns()
+        dataset_train = test(i, run, args, offline_buffer_train if offline_buffer_train is not None else None, log_path)
+        # get_returns()
 
         #get renewed test dataset of 20k
         args.data_name = 'test'
         args.eval_episodes = 20000
         args.mode = 'online'
 
-        dataset_test = test(i, args, offline_buffer_test if offline_buffer_test is not None else None)
-        get_returns()
+        dataset_test = test(i, run, args, offline_buffer_test if offline_buffer_test is not None else None, log_path)
+        # get_returns()
 
         obs_shape = 1080
         action_dim = 1
         offline_buffer_train = ReplayBuffer(
             buffer_size=len(dataset_train["observations"]),
-            obs_shape=obs_shape,
+            obs_shape=(obs_shape,),
             obs_dtype=np.float32,
             action_dim=action_dim,
             action_dtype=np.float32
@@ -94,37 +99,23 @@ def main(args):
 
         offline_buffer_test = ReplayBuffer(
             buffer_size=len(dataset_test["observations"]),
-            obs_shape=obs_shape,
+            obs_shape=(obs_shape,),
             obs_dtype=np.float32,
             action_dim=action_dim,
             action_dtype=np.float32
         )
         offline_buffer_test.load_dataset(dataset_test)
 
-        def get_returns():
-
-            """ 
-            at the end of each test run, tfevents is generated
-            convert tfevents to csv
-            seed_a>ite_i>offline or online> all docs
-            generate csv for each ite
-            generate merged csv for all iterations
-            """
-
-            path = os.path.join(log_path, 'test',  f'ite_{i}', args.mode)
-            result = convert_tfenvents_to_csv(path, args.xlabel, args.ylabel, args.ylabel2 )
-            merge_csv(result, path, args.xlabel, args.ylabel, args.ylabel2)
         
-        
-
-
 def get_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--algo-name", type=str, default="mopo")
+    parser.add_argument("--algo-name", type=str, default="mbpo_uq")
     parser.add_argument("--pretrained", type=bool, default=True)
     parser.add_argument("--mode", type=str, default="offline")
     # parser.add_argument("--task", type=str, default="walker2d-medium-replay-v2")
-    parser.add_argument("--policy_path" , type=str, default="log/halfcheetah_medium_plot/mopo/seed_5_0403_230811-halfcheetah_medium_replay_v0_mopo/policy_halfcheetah-medium-replay-v0.pth")
+    parser.add_argument("--policy_path" , type=str, default="log/Abiomed-v0/mopo/seed_5_0331_215447-Abiomed_v0_mopo/policy.pth")
+    parser.add_argument('-cuda', '--cuda_number', type=str, metavar='<device>', default=2, #required=True,
+                        help='Specify the CUDA device number to use.')
 
     parser.add_argument("--task", type=str, default="Abiomed-v0")
     parser.add_argument("--seed", type=int, default=1)
@@ -149,9 +140,9 @@ def get_args():
     parser.add_argument("--real-ratio", type=float, default=0.05)
     parser.add_argument("--dynamics-model-dir", type=str, default=None)
 
-    parser.add_argument("--epoch", type=int, default=1000) #1000
-    parser.add_argument("--step-per-epoch", type=int, default=1000)
-    parser.add_argument("--eval_episodes", type=int, default=10)
+    parser.add_argument("--epoch", type=int, default=1) #1000
+    parser.add_argument("--step-per-epoch", type=int, default=1)
+    parser.add_argument("--eval_episodes", type=int, default=1)
     parser.add_argument("--batch-size", type=int, default=256)
     parser.add_argument("--logdir", type=str, default="log")
     parser.add_argument("--log-freq", type=int, default=1000)
@@ -185,9 +176,7 @@ def get_args():
         #default='log/hopper-medium-replay-v0/mopo',
          default='log', help='root dir'
     )
-    parser.add_argument(
-        '--task', default='halfcheetah-medium-v2', help='task'
-    )
+   
     parser.add_argument(
         '--algos', default="mopo", help='algos'
     )
@@ -200,7 +189,7 @@ def get_args():
     )
 
     parser.add_argument(
-        '--ylabel2', default='normalized_episode_reward', help='matplotlib figure ylabel'
+        '--ylabel2', default='episode_accuracy', help='matplotlib figure ylabel'
     )
 
     args = parser.parse_args()

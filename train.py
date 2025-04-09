@@ -85,11 +85,10 @@ def get_args():
     return parser.parse_args()
 
 
-def train(logger, args=get_args(), offline_buffer = None, ):
+def train(logger, run, args=get_args(), offline_buffer = None, ):
 
 
-
-    # create env and dataset
+# create env and dataset
     if args.task == "Abiomed-v0":
         # Register the environment only once
         gym.envs.registration.register(
@@ -98,7 +97,7 @@ def train(logger, args=get_args(), offline_buffer = None, ):
             max_episode_steps=1000,
         )
         # Build kwargs based on whether offline_buffer is provided
-        kwargs = {"args": args, "logger": logger, "data_name": "train"}
+        kwargs = {"args": args, "logger": logger, "data_name": "train", "pretrained": args.pretrained}
         if offline_buffer is not None:
             kwargs["offline_buffer"] = offline_buffer
         env = gym.make(args.task, **kwargs)
@@ -118,6 +117,7 @@ def train(logger, args=get_args(), offline_buffer = None, ):
     static_fns = importlib.import_module(import_path).StaticFns
     config_path = f"config.{task}"
     config = importlib.import_module(config_path).default_config
+    
 
     # create policy model
     actor_backbone = MLP(input_dim=np.prod(args.obs_shape), hidden_dims=[256, 256])

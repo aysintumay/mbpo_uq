@@ -1,0 +1,46 @@
+2025-04-09 08:18:10,253 INFO    MainThread:217282 [wandb_setup.py:_flush():67] Current SDK version is 0.19.8
+2025-04-09 08:18:10,253 INFO    MainThread:217282 [wandb_setup.py:_flush():67] Configure stats pid to 217282
+2025-04-09 08:18:10,253 INFO    MainThread:217282 [wandb_setup.py:_flush():67] Loading settings from /home/ubuntu/.config/wandb/settings
+2025-04-09 08:18:10,253 INFO    MainThread:217282 [wandb_setup.py:_flush():67] Loading settings from /home/ubuntu/mbpo_uq/wandb/settings
+2025-04-09 08:18:10,254 INFO    MainThread:217282 [wandb_setup.py:_flush():67] Loading settings from environment variables
+2025-04-09 08:18:10,254 INFO    MainThread:217282 [wandb_init.py:setup_run_log_directory():647] Logging user logs to /home/ubuntu/mbpo_uq/wandb/run-20250409_081810-lah05ohe/logs/debug.log
+2025-04-09 08:18:10,254 INFO    MainThread:217282 [wandb_init.py:setup_run_log_directory():648] Logging internal logs to /home/ubuntu/mbpo_uq/wandb/run-20250409_081810-lah05ohe/logs/debug-internal.log
+2025-04-09 08:18:10,254 INFO    MainThread:217282 [wandb_init.py:init():761] calling init triggers
+2025-04-09 08:18:10,254 INFO    MainThread:217282 [wandb_init.py:init():766] wandb.init called with sweep_config: {}
+config: {'algo_name': 'mbpo_uq', 'pretrained': True, 'mode': 'offline', 'policy_path': 'log/Abiomed-v0/mopo/seed_5_0331_215447-Abiomed_v0_mopo/policy.pth', 'cuda_number': 2, 'task': 'Abiomed-v0', 'seed': 1, 'actor_lr': 0.0003, 'critic_lr': 0.0003, 'gamma': 0.99, 'tau': 0.005, 'alpha': 0.2, 'auto_alpha': True, 'target_entropy': -3, 'alpha_lr': 0.0003, 'dynamics_lr': 0.001, 'n_ensembles': 7, 'n_elites': 5, 'reward_penalty_coef': 1.0, 'rollout_length': 5, 'rollout_batch_size': 50000, 'rollout_freq': 1000, 'model_retain_epochs': 5, 'real_ratio': 0.05, 'dynamics_model_dir': None, 'epoch': 1, 'step_per_epoch': 1, 'eval_episodes': 1, 'batch_size': 256, 'logdir': 'log', 'log_freq': 1000, 'device': 'cuda', 'seq_dim': 12, 'output_dim': 132, 'bc': 64, 'nepochs': 20, 'encs': 2, 'lr': 0.001, 'encoder_dropout': 0.1, 'decoder_dropout': 0, 'dim_model': 256, 'path': '/data/abiomed_tmp/processed', 'root_dir': 'log', 'algos': 'mopo', 'xlabel': 'Timesteps', 'ylabel': 'episode_reward', 'ylabel2': 'episode_accuracy', '_wandb': {}}
+2025-04-09 08:18:10,254 INFO    MainThread:217282 [wandb_init.py:init():784] starting backend
+2025-04-09 08:18:10,255 INFO    MainThread:217282 [wandb_init.py:init():788] sending inform_init request
+2025-04-09 08:18:10,302 INFO    MainThread:217282 [backend.py:_multiprocessing_setup():101] multiprocessing start_methods=fork,spawn,forkserver, using: spawn
+2025-04-09 08:18:10,303 INFO    MainThread:217282 [wandb_init.py:init():798] backend started and connected
+2025-04-09 08:18:10,312 INFO    MainThread:217282 [wandb_init.py:init():891] updated telemetry
+2025-04-09 08:18:10,368 INFO    MainThread:217282 [wandb_init.py:init():915] communicating run to backend with 90.0 second timeout
+2025-04-09 08:18:10,736 INFO    MainThread:217282 [wandb_init.py:init():990] starting run threads in backend
+2025-04-09 08:18:11,742 INFO    MainThread:217282 [wandb_run.py:_console_start():2375] atexit reg
+2025-04-09 08:18:11,743 INFO    MainThread:217282 [wandb_run.py:_redirect():2227] redirect: wrap_raw
+2025-04-09 08:18:11,745 INFO    MainThread:217282 [wandb_run.py:_redirect():2292] Wrapping output streams.
+2025-04-09 08:18:11,745 INFO    MainThread:217282 [wandb_run.py:_redirect():2315] Redirects installed.
+2025-04-09 08:18:11,750 INFO    MainThread:217282 [wandb_init.py:init():1032] run started, returning control to user process
+2025-04-09 08:19:38,910 INFO    MainThread:217282 [wandb_init.py:setup_run_log_directory():647] Logging user logs to /home/ubuntu/mbpo_uq/wandb/run-20250409_081938-lah05ohe/logs/debug.log
+2025-04-09 08:19:38,910 INFO    MainThread:217282 [wandb_init.py:setup_run_log_directory():648] Logging internal logs to /home/ubuntu/mbpo_uq/wandb/run-20250409_081938-lah05ohe/logs/debug-internal.log
+2025-04-09 08:19:38,911 INFO    MainThread:217282 [wandb_init.py:init():761] calling init triggers
+2025-04-09 08:19:38,911 INFO    MainThread:217282 [wandb_init.py:init():766] wandb.init called with sweep_config: {}
+config: {'_wandb': {}}
+2025-04-09 08:19:38,911 INFO    MainThread:217282 [wandb_init.py:init():776] wandb.init() called while a run is active
+2025-04-09 08:21:18,180 INFO    MainThread:217282 [wandb_init.py:setup_run_log_directory():647] Logging user logs to /home/ubuntu/mbpo_uq/wandb/run-20250409_082118-lah05ohe/logs/debug.log
+2025-04-09 08:21:18,181 INFO    MainThread:217282 [wandb_init.py:setup_run_log_directory():648] Logging internal logs to /home/ubuntu/mbpo_uq/wandb/run-20250409_082118-lah05ohe/logs/debug-internal.log
+2025-04-09 08:21:18,182 INFO    MainThread:217282 [wandb_init.py:init():761] calling init triggers
+2025-04-09 08:21:18,182 INFO    MainThread:217282 [wandb_init.py:init():766] wandb.init called with sweep_config: {}
+config: {'_wandb': {}}
+2025-04-09 08:21:18,182 INFO    MainThread:217282 [wandb_init.py:init():776] wandb.init() called while a run is active
+2025-04-09 08:21:51,057 INFO    MainThread:217282 [wandb_init.py:setup_run_log_directory():647] Logging user logs to /home/ubuntu/mbpo_uq/wandb/run-20250409_082151-lah05ohe/logs/debug.log
+2025-04-09 08:21:51,058 INFO    MainThread:217282 [wandb_init.py:setup_run_log_directory():648] Logging internal logs to /home/ubuntu/mbpo_uq/wandb/run-20250409_082151-lah05ohe/logs/debug-internal.log
+2025-04-09 08:21:51,058 INFO    MainThread:217282 [wandb_init.py:init():761] calling init triggers
+2025-04-09 08:21:51,058 INFO    MainThread:217282 [wandb_init.py:init():766] wandb.init called with sweep_config: {}
+config: {'_wandb': {}}
+2025-04-09 08:21:51,059 INFO    MainThread:217282 [wandb_init.py:init():776] wandb.init() called while a run is active
+2025-04-09 08:22:09,380 INFO    MainThread:217282 [wandb_init.py:setup_run_log_directory():647] Logging user logs to /home/ubuntu/mbpo_uq/wandb/run-20250409_082209-lah05ohe/logs/debug.log
+2025-04-09 08:22:09,381 INFO    MainThread:217282 [wandb_init.py:setup_run_log_directory():648] Logging internal logs to /home/ubuntu/mbpo_uq/wandb/run-20250409_082209-lah05ohe/logs/debug-internal.log
+2025-04-09 08:22:09,381 INFO    MainThread:217282 [wandb_init.py:init():761] calling init triggers
+2025-04-09 08:22:09,382 INFO    MainThread:217282 [wandb_init.py:init():766] wandb.init called with sweep_config: {}
+config: {'_wandb': {}}
+2025-04-09 08:22:09,382 INFO    MainThread:217282 [wandb_init.py:init():776] wandb.init() called while a run is active

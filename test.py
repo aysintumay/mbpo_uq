@@ -20,7 +20,7 @@ from common.buffer import ReplayBuffer
 from common.logger import Logger
 from trainer import Trainer,plot_accuracy
 from common.util import set_device_and_logger
-from trainer import _evaluate, evaluate
+# from trainer import _evaluate, evaluate
 
 
 def get_args():
@@ -122,7 +122,7 @@ def _evaluate(policy, eval_env, episodes):
         }
 
 
-def evaluate(policy, env, trainer, episodes=500, step_per_epoch = 1000):  
+def evaluate(policy, env, trainer, i, episodes=500, step_per_epoch = 1000):  
     policy.eval()
     obs = env.reset()
     
@@ -165,7 +165,7 @@ def evaluate(policy, env, trainer, episodes=500, step_per_epoch = 1000):
 
         if terminal_counter == step_per_epoch:
 
-            trainer.plot_predictions_rl(obs.reshape(1,90,12), next_state_gt.reshape(1,90,12), next_obs.reshape(1,90,12), action.reshape(1,90), full_pl.reshape(1,90), num_episodes)
+            # trainer.plot_predictions_rl(obs.reshape(1,90,12), next_state_gt.reshape(1,90,12), next_obs.reshape(1,90,12), action.reshape(1,90), full_pl.reshape(1,90), i)
             eval_ep_info_buffer.append(
                 {"episode_reward": episode_reward,
                     "episode_length": episode_length,
@@ -190,48 +190,48 @@ def evaluate(policy, env, trainer, episodes=500, step_per_epoch = 1000):
         reward_.append(reward)
         terminal_.append(terminal)
 
-        dataset = {
-                    'observations': np.array(obs_),
-                    'actions': np.array(action_).reshape(-1, 1),  # Reshape to ensure it's 2D
-                    'rewards': np.array(reward_),
-                    'terminals': np.array(terminal),
-                    'next_observations': np.array(next_obs_),
-                }
+    dataset = {
+                'observations': np.array(obs_),
+                'actions': np.array(action_).reshape(-1, 1),  # Reshape to ensure it's 2D
+                'rewards': np.array(reward_),
+                'terminals': np.array(terminal),
+                'next_observations': np.array(next_obs_),
+            }
             
 
-        return {
-            "eval/episode_reward": [ep_info["episode_reward"] for ep_info in eval_ep_info_buffer],
-            "eval/episode_length": [ep_info["episode_length"] for ep_info in eval_ep_info_buffer],
-            "eval/episode_accuracy": [ep_info["episode_accurcy"] for ep_info in eval_ep_info_buffer],
-            "eval/episode_1_off_accuracy": [ep_info["episode_1_off_accuracy"] for ep_info in eval_ep_info_buffer],
-        }, dataset
+    return {
+        "eval/episode_reward": [ep_info["episode_reward"] for ep_info in eval_ep_info_buffer],
+        "eval/episode_length": [ep_info["episode_length"] for ep_info in eval_ep_info_buffer],
+        "eval/episode_accuracy": [ep_info["episode_accurcy"] for ep_info in eval_ep_info_buffer],
+        "eval/episode_1_off_accuracy": [ep_info["episode_1_off_accuracy"] for ep_info in eval_ep_info_buffer],
+    }, dataset
 
 
-def get_eval(policy, env, logger, trainer, args,):
+def get_eval(policy, env, logger, trainer, i, args,):
     reward_l, acc_l, off_acc = [], [], []
     reward_std_l, acc_std_l, off_acc_std = [], [], []
     if args.task == 'Abiomed-v0':
-        eval_info, dataset = evaluate(policy, env, trainer, episodes=args.eval_episodes, step_per_epoch = args.step_per_epoch)
+        eval_info, dataset = evaluate(policy, env, trainer, args.eval_episodes, args.step_per_epoch, i)
     else:
         eval_info, dataset = _evaluate(policy, env, args.eval_episodes)
     ep_reward_mean, ep_reward_std = np.mean(eval_info["eval/episode_reward"]), np.std(eval_info["eval/episode_reward"])
     ep_length_mean, ep_length_std = np.mean(eval_info["eval/episode_length"]), np.std(eval_info["eval/episode_length"])
     if args.task == 'Abiomed-v0':
-        ep_accuracy_mean, ep_accuracy_std = np.mean(eval_info[0]["eval/episode_accuracy"]), np.std(eval_info[0]["eval/episode_accuracy"])
-        ep_1_off_accuracy_mean, ep_1_off_accuracy_std = np.mean(eval_info[0]["eval/episode_1_off_accuracy"]), np.std(eval_info[0]["eval/episode_1_off_accuracy"])
+        ep_accuracy_mean, ep_accuracy_std = np.mean(eval_info["eval/episode_accuracy"]), np.std(eval_info["eval/episode_accuracy"])
+        ep_1_off_accuracy_mean, ep_1_off_accuracy_std = np.mean(eval_info["eval/episode_1_off_accuracy"]), np.std(eval_info["eval/episode_1_off_accuracy"])
 
     if args.task == 'Abiomed-v0':
         logger.record("eval/episode_accuracy", ep_accuracy_mean, args.eval_episodes, printed=False)
-        logger.record("eval/episode_1_off_accuracy", ep_1_off_accuracy_mean, args.eval_episodes, printed=False)
+        # logger.record("eval/episode_1_off_accuracy", ep_1_off_accuracy_mean, args.eval_episodes, printed=False)
         logger.print(f"episode_reward: {ep_reward_mean:.3f} ± {ep_reward_std:.3f},\
                             episode_length: {ep_length_mean:.3f} ± {ep_length_std:.3f},\
                             episode_accuracy: {ep_accuracy_mean:.3f} ± {ep_accuracy_std:.3f},\
                             episode_1_off_accuracy: {ep_1_off_accuracy_mean:.3f} ± {ep_1_off_accuracy_std:.3f}")
     else:
-        logger.record("eval/episode_reward", ep_reward_mean, args.eval_episodes, printed=False)
-        logger.record("eval/episode_length", ep_length_mean, args.eval_episodes, printed=False)
         logger.print(f"episode_reward: {ep_reward_mean:.3f} ± {ep_reward_std:.3f},\
                             episode_length: {ep_length_mean:.3f} ± {ep_length_std:.3f}")
+    logger.record("eval/episode_reward", ep_reward_mean, args.eval_episodes, printed=False)
+    # logger.record("eval/episode_length", ep_length_mean, args.eval_episodes, printed=False)
     # if env.name == 'Abiomed-v0':
     #     plot_accuracy(np.array(reward_l), np.array(reward_std_l)/args.eval_episodes, 'Average Return')
     #     plot_accuracy(np.array(acc_l), np.array(acc_std_l)/args.eval_episodes, 'Accuracy')
@@ -244,17 +244,17 @@ def get_eval(policy, env, logger, trainer, args,):
         logger.record("normalized_episode_reward", normalized_score_mean, ep_length_mean, printed=False)
         logger.print(f"normalized_episode_reward: {normalized_score_mean:.3f} ± {normalized_score_std:.3f},\
                             episode_length: {ep_length_mean:.3f} ± {ep_length_std:.3f}")
-    else:
-        logger.record("episode_reward", ep_reward_mean/ep_length_mean, args.eval_episodes, printed=False)
+    # else:
+        # logger.record("episode_reward", ep_reward_mean/ep_length_mean, args.eval_episodes, printed=False)
 
-    if args.task == 'Abiomed-v0':
-        logger.record("avg episode_accuracy", np.array(acc_l).mean(), args.eval_episodes, printed=False)
-        logger.record("avg episode_1_off_accuracy", np.array(off_acc).mean(), args.eval_episodes, printed=False)
+    # if args.task == 'Abiomed-v0':
+    #     logger.record("avg episode_accuracy", np.array(acc_l).mean(), args.eval_episodes, printed=False)
+    #     logger.record("avg episode_1_off_accuracy", np.array(off_acc).mean(), args.eval_episodes, printed=False)
     return dataset
 
 
 
-def test(i, args=get_args(), offline_buffer=None, log_path=None):
+def test(i, run, args=get_args(), offline_buffer=None, log_path=None):
 
 
     log_path = os.path.join(log_path, 'test',  f'ite_{i}', args.mode)
@@ -266,7 +266,7 @@ def test(i, args=get_args(), offline_buffer=None, log_path=None):
     set_device_and_logger(Devid,logger)
 
     # create env and dataset
-    if not args.replay:
+    if offline_buffer is None:
         if args.task == "Abiomed-v0":
             gym.envs.registration.register(
             id='Abiomed-v0',
@@ -394,10 +394,11 @@ def test(i, args=get_args(), offline_buffer=None, log_path=None):
     )
     
     policy_state_dict = torch.load(args.policy_path, map_location=args.device)
+    # policy_state_dict = torch.load(os.path.join(log_path, f'policy_{args.task}'), map_location=args.device)
     sac_policy.load_state_dict(policy_state_dict)
 
 
-    dataset = get_eval(sac_policy, env, logger, trainer, args)
+    dataset = get_eval(sac_policy, env, logger, trainer, i, args)
 
     return dataset
 

@@ -108,7 +108,7 @@ class WorldTransformer:
         # Load the model state dict
    
         # self.model.load_state_dict(torch.load(os.path.join(self.logger.writer.get_logdir(), f"checkpoint_epoch_{self.args.epoch}.pth")))
-        self.model.load_state_dict(torch.load(os.path.join('/home/ubuntu/mopo/log/Abiomed-v0/mopo/seed_1_0324_203947-Abiomed_v0_mopo', f"checkpoint_epoch_{self.args.nepochs}.pth")))
+        self.model.load_state_dict(torch.load("log/Abiomed-v0/mopo/seed_1_0407_071825-Abiomed_v0_mopo/checkpoint_epoch_20.pth"))
         return self.model.to(self.device)
     
     def predict(self, obs_loader):
@@ -247,7 +247,7 @@ class TimeSeriesTransformer(nn.Module):
             for i in range(9):
                 pl_i = pl[:, i*10:(i+1)*10]
                 output = self.forward(input_i, pl_i)
-                output_reshaped = output.reshape([output.shape[0], 11, 6])[:, 1:,:] #only take new predictions, ignore first datapoint
+                output_reshaped = output.reshape([output.shape[0], 11, input_i.size(2)])[:, 1:,:] #only take new predictions, ignore first datapoint
                 outputs.append(output_reshaped)
                 input_i = torch.concat([input_i[:,10:,:], output_reshaped], axis=1)
     

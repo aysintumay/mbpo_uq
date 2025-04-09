@@ -192,7 +192,7 @@ class TransitionModel:
             info = {'penalized_rewards': penalized_rewards}
 
         assert (type(next_obs) == np.ndarray)
-        penalized_rewards = penalized_rewards[:, None]
+        penalized_rewards =  penalized_rewards[:, None]
         terminals = terminals[:, None]
         return next_obs, penalized_rewards, terminals, info
 
@@ -238,7 +238,7 @@ class TransitionModel:
 
     def load_model(self, info):
         util.logger.log_path = '/home/ubuntu/mopo/log/Abiomed-v0/mopo/seed_5_0331_161040-Abiomed_v0_mopo'
-        util.logger.log_path = '/home/ubuntu/mopo/log/halfcheetah-medium-replay-v0/mopo/seed_5_0403_215901-halfcheetah_medium_replay_v0_mopo'
+        # util.logger.log_path = '/home/ubuntu/mopo/log/halfcheetah-medium-replay-v0/mopo/seed_5_0403_215901-halfcheetah_medium_replay_v0_mopo'
         save_dir = os.path.join(util.logger.log_path, 'models')
         model_save_dir = os.path.join(save_dir, "ite_{}".format(info))
         for network_name, network in self.networks.items():

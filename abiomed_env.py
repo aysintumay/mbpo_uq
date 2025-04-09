@@ -7,13 +7,14 @@ from tqdm import tqdm
 import scoring
 
 class AbiomedEnv(gym.Env):
-    def __init__(self, args, logger,data_name, replay = False,  offline_buffer = None):
+    def __init__(self, args, logger,data_name, replay = False,  offline_buffer = None, pretrained = False):
         super(AbiomedEnv, self).__init__()
         # Replace obs_dim and action_dim with actual dimensions
         self.observation_space = spaces.Box(low=-1, high=1, shape=(12*90,), dtype=np.float32)
         self.action_space = spaces.Box(low=-1, high=1, shape=(1,), dtype=np.float32)
-
+        self.id = 'Abiomed-v0'
         self.replay = replay
+        self.pretrained = args.pretrained
         self.offline_buffer = offline_buffer
         self.logger = logger
         self.args = args
@@ -144,21 +145,21 @@ class AbiomedEnv(gym.Env):
         dataloder = self.world_model.resize(obs, action, next_state)
         next_obs = self.world_model.predict(dataloder)
         num_samples = 50
-        output_mult = self.world_model.model.sample_autoregressive_multiple(obs, action, num_samples=num_samples,)
+        output_mult = self.world_model.model.sample_autoregressive_multiple(torch.Tensor(obs.reshape(-1, 90, self.args.seq_dim)).to(self.args.device), torch.Tensor(action.reshape(1,-1)).to(self.args.device), num_samples=num_samples,)
         # output_mult_all.append(output_mult)
         next_obs_unnorm = self.unnormalize(next_obs, np.arange(0,12))
-        
+        output_mult = output_mult.detach().cpu().numpy()
         for i in range(num_samples):
-            output_mult[:,i] = self.unnormalize(output_mult[:,i], np.arange(0,12))
+            output_mult[i] = self.unnormalize(output_mult[i], np.arange(0,12))
         #get rewards
-        cum_rewards, crps = self.get_reward_crps(next_obs_unnorm, output_mult, next_state)
+        reward, crps = self.get_reward_crps(next_obs_unnorm, output_mult, next_state.reshape(1, 90, self.args.seq_dim))
 
-        reward = self.compute_reward(next_obs_unnorm)
+        # reward = self.compute_reward(next_obs_unnorm)
         #unnormalize
         done = self.check_terminal_condition()
         info = {}
         self.current_index += 1
-        return next_obs, reward, done, info, crps
+        return next_obs, reward, done, crps
 
     def compute_reward(self, data, crps=None, map_dim = 0, pulsat_dim = 7, hr_dim=9, lvedp_dim=4):
         ## GETS rid of min map- redundant
@@ -219,24 +220,68 @@ class AbiomedEnv(gym.Env):
         else: score+=5 # cpo <=0.5
         """
         if crps:
-            score = score - crps
+            score = score - 0.01*crps
 
         
         return -score
 
+
+    def compute_reward_smooth(data, map_dim=0, pulsat_dim=6, hr_dim=7, lvedp_dim=3, crps = None):
+        '''
+        Differentiable version of the reward function using PyTorch
+        '''
+        score = torch.tensor(0.0, device=data.device)
+        relu = torch.nn.ReLU()
+        # MAP component
+        map_data = data[..., map_dim]
+
+        # MinMAP range component
+        minMAP = torch.min(map_data)
+        score += relu(7 * (60 - minMAP) / 20) #relu(7 * (60 - minMAP) / 20)  # Linear score from 0 at MAP=60 to 7 at MAP=40 and below
+        
+        # # Time MAP < 60 component
+        # time_below_60 = torch.mean(smooth_threshold(-map_data, -60)) * 100
+        # score += relu(7/5 * time_below_60)
+
+        # Heart Rate component
+        hr = torch.min(data[..., hr_dim])
+        # Polynomial penalty for heart rate outside 50-100 range
+        hr_penalty = 3 * (hr - 75)**2 / 625 # Quadratic penalty centered at hr=75, max penalty at hr=50 or 100
+        score += hr_penalty
+        
+        # Pulsatility component
+        pulsat = torch.min(data[..., pulsat_dim])
+        pulsat_penalty = 7 * (20 - pulsat) / 20
+        score += pulsat_penalty
+        
+        if crps:
+            score = score - crps
+        return -score
+
+
     def get_reward_crps(self, data, mult_pred, target):
-        rewards = []
-        map_only = []
-        crps_ts = []
+        
+        '''
+        data: next state prediction ground truth (1,90,12)
+        mult_pred: (50,1,90,12)
+        target: next state (1,90,12)
+
+        return: 1 crps and 1 reward value for each (1,90,12) sample
+        '''
+        
+        
+        # rewards = []
+        # map_only = []
+        # crps_ts = []
 
         for i in range(data.shape[0]):
-            crps = scoring.crps_evaluation(np.array(mult_pred[:,i,:,0].detach().cpu()), np.array(target[i,:,0].detach().cpu()))
-            crps_ts.extend(crps)
-            un = scoring.unnorm_all(data[i].cpu(), self.rwd_std, self.rwd_means)
-            r1 = self.compute_reward(np.array(un), crps.mean())
-            rewards.append(r1)
-            cum_rewards = np.mean(rewards)
-        return cum_rewards, crps_ts 
+            crps = scoring.crps_evaluation(np.array(mult_pred[i,:,:,0]), np.array(target[i,:,0]))
+            # crps_ts.extend(crps)
+            # un = scoring.unnorm_all(data[i], self.rwd_stds, self.rwd_means)
+            r1 = self.compute_reward(np.array(data[i]), crps.mean())
+            # rewards.append(r1)
+            # cum_rewards = np.mean(rewards)
+        return r1, crps 
 
 
 
