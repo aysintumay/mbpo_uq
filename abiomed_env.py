@@ -5,15 +5,16 @@ import torch
 from models.world_transformer import WorldTransformer
 from tqdm import tqdm
 import scoring
+from sklearn.preprocessing import MinMaxScaler
 
 class AbiomedEnv(gym.Env):
-    def __init__(self, args, logger,data_name, replay = False,  offline_buffer = None, pretrained = False):
+    def __init__(self, args=None, logger=None, data_name='train', scaler_info=None, offline_buffer = None):
         super(AbiomedEnv, self).__init__()
         # Replace obs_dim and action_dim with actual dimensions
         self.observation_space = spaces.Box(low=-1, high=1, shape=(12*90,), dtype=np.float32)
         self.action_space = spaces.Box(low=-1, high=1, shape=(1,), dtype=np.float32)
         self.id = 'Abiomed-v0'
-        self.replay = replay
+    
         self.pretrained = args.pretrained
         self.offline_buffer = offline_buffer
         self.logger = logger
@@ -23,8 +24,10 @@ class AbiomedEnv(gym.Env):
         # self.trained_world_model = self.world_model.load_model()
         self.data = self.load_data()
         self.current_index = 0
-        self.rwd_means = []
-        self.rwd_stds = []
+        self.rwd_means = scaler_info['rwd_means'] if scaler_info else []
+        self.rwd_stds = scaler_info['rwd_stds'] if scaler_info else []
+        self.scaler = scaler_info['scaler'] if scaler_info['scaler'] else None
+
 
     def load_data(self, offline_buffer=None):
 
@@ -49,7 +52,8 @@ class AbiomedEnv(gym.Env):
                 row = norm_data[i]
                 unnorm_row = data[i]
                 reward = self.compute_reward(unnorm_row[90:, :12])
-                reward = reward/31
+
+                # reward = reward/31
                 state = row[:90, :12].flatten()
                 next_state = row[90:, :12].flatten()
 
@@ -69,30 +73,53 @@ class AbiomedEnv(gym.Env):
                 full_action_l.append(all_action)  # Store the full action for analysis
 
                     
+            normalized_rewards = self.normalize_reward(reward_l)
+                    
             return {
                     'observations': np.array(obs),
                     'actions': np.array(action_l).reshape(-1, 1),  # Reshape to ensure it's 2D
-                    'rewards': np.array(reward_l),
+                    'rewards': np.array(normalized_rewards),
                     'terminals': np.array(done_l),
                     'next_observations': np.array(next_obs),
                     'full_actions': np.array(full_action_l)  # Store the full action for analysis
                     }
     
         if offline_buffer is None:
-            #change to the formal path later
+
             train = torch.load(f"/data/abiomed_tmp/processed/pp_{self.data_name}_amicgs.pt").numpy()
-            # test = torch.load(f"/data/abiomed_tmp/processed/pp_test_amicgs.pt").numpy()
+            
+            if self.data_name == 'train':
+                #dont take ID column
+                train = train[: ,:, :-1]
+                self.rwd_means = train.mean(axis=(0, 1))
+                self.rwd_stds = train.std(axis=(0, 1))
+                train_dict = generate_buffer(train)
+                
+            else:
+                train_dict = generate_buffer(train)
 
-            #dont take ID column
-            train = train[: ,:, :-1]
-            self.rwd_means = train.mean(axis=(0, 1))
-            self.rwd_stds = train.std(axis=(0, 1))
-
-            train_dict = generate_buffer(train)
             return train_dict
+        #save rwd_stds and rwd_means and sclaer for test usage
         else:
+            
+            offline_buffer['actions'] =  (offline_buffer['actions']  - self.rwd_means[12])/self.rwd_stds[[12]]
+            offline_buffer['rewards'] = self.normalize_reward(offline_buffer['rewards'])
+
             return offline_buffer
+        
     
+    def normalize_reward(self, rewards):
+        if self.scaler:
+            rewards = self.scaler.transform(rewards)
+        else:
+            scaler = MinMaxScaler()
+            rewards = rewards.reshape(-1, 1)
+            scaler.fit(rewards)
+            normalized_rewards = scaler.transform(rewards)
+            self.scaler = scaler
+        return normalized_rewards
+
+
     def get_dataset(self):
 
         return self.load_data()
@@ -152,14 +179,15 @@ class AbiomedEnv(gym.Env):
         for i in range(num_samples):
             output_mult[i] = self.unnormalize(output_mult[i], np.arange(0,12))
         #get rewards
-        reward, crps = self.get_reward_crps(next_obs_unnorm, output_mult, next_state.reshape(1, 90, self.args.seq_dim))
+        next_state = self.unnormalize(next_state.reshape(1, 90, self.args.seq_dim), np.arange(0,12))
+        reward, crps = self.get_reward_crps(next_obs_unnorm, output_mult, next_state)
 
         # reward = self.compute_reward(next_obs_unnorm)
         #unnormalize
         done = self.check_terminal_condition()
-        info = {}
+        info = {'crps': crps}
         self.current_index += 1
-        return next_obs, reward, done, crps
+        return next_obs, reward, done, info
 
     def compute_reward(self, data, crps=None, map_dim = 0, pulsat_dim = 7, hr_dim=9, lvedp_dim=4):
         ## GETS rid of min map- redundant
@@ -220,7 +248,7 @@ class AbiomedEnv(gym.Env):
         else: score+=5 # cpo <=0.5
         """
         if crps:
-            score = score - 0.01*crps
+            score = score - 0.1*crps
 
         
         return -score
@@ -275,7 +303,7 @@ class AbiomedEnv(gym.Env):
         # crps_ts = []
 
         for i in range(data.shape[0]):
-            crps = scoring.crps_evaluation(np.array(mult_pred[i,:,:,0]), np.array(target[i,:,0]))
+            crps = scoring.crps_evaluation(np.array(mult_pred[:,i,:,0]), np.array(target[i,:,0]))
             # crps_ts.extend(crps)
             # un = scoring.unnorm_all(data[i], self.rwd_stds, self.rwd_means)
             r1 = self.compute_reward(np.array(data[i]), crps.mean())

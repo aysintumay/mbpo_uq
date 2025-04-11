@@ -73,10 +73,13 @@ def crps_evaluation(samples, y_true):
     """
     Calculate pointwise CRPS
     """
-    e_x_y = np.mean(np.abs(samples.reshape(-1,1) - y_true.reshape(-1,1)), axis=0)
-    e_x_x_prime = np.mean([np.abs(si - sj) for i, si in enumerate(samples.reshape(-1,1)) for j, sj in enumerate(samples.reshape(-1,1)) if i != j])
+    e_x_y = np.mean(np.abs(samples - y_true), axis=0)
+    e_x_x_prime = np.mean([np.abs(si - sj) for i, si in enumerate(samples) for j, sj in enumerate(samples) if i != j])
     crps = e_x_y - 0.5 * e_x_x_prime
     crps_ed = crps
+
+    # DO NOT, if calculating pointwise and concatenating with the feature vector 
+    mean_crps = np.mean(crps)
 
     # mean_ed_2 = np.mean(samples, axis = 0)
     # std_ed_2 = np.std(samples, axis =0)

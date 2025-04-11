@@ -1,0 +1,7 @@
+World model total time: 61.381s
+Epoch #1: episode_accuracy: 0.000 ± 0.000,                                   episode_1_off_accuracy: 0.000 ± 0.000
+Epoch #1: episode_reward: -32.235 ± 0.000,                            episode_length: 2.000 ± 0.000
+total time: 75.575s
+Epoch #1: episode_accuracy: 0.454 ± 0.000,                                   episode_1_off_accuracy: 0.586 ± 0.000
+Epoch #1: episode_reward: -160.994 ± 0.000,                            episode_length: 10.000 ± 0.000
+total time: 80.846s

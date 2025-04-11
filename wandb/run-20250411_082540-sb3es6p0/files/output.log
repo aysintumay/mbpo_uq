@@ -1,0 +1,43 @@
+setting device: cuda:0
+====================Iteration 1====================
+plshape is  (49939, 90)
+number of epochs 1
+100%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 781/781 [00:20<00:00, 38.70it/s]
+Epoch 1, Loss: 0.1380
+[1;32m [info][0m: World model total time: 22.661s
+trained model
+100%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 49939/49939 [00:09<00:00, 5068.89it/s]
+100%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 49939/49939 [00:09<00:00, 5344.46it/s]
+Epoch #1/1:   0%|                                                                                                                                             | 0/2 [00:10<?, ?it/s]
+Traceback (most recent call last):
+  File "/home/ubuntu/miniconda3/envs/mopo/lib/python3.8/runpy.py", line 194, in _run_module_as_main
+    return _run_code(code, main_globals, None,
+  File "/home/ubuntu/miniconda3/envs/mopo/lib/python3.8/runpy.py", line 87, in _run_code
+    exec(code, run_globals)
+  File "/home/ubuntu/.vscode-server/extensions/ms-python.debugpy-2025.6.0-linux-x64/bundled/libs/debugpy/adapter/../../debugpy/launcher/../../debugpy/__main__.py", line 71, in <module>
+    cli.main()
+  File "/home/ubuntu/.vscode-server/extensions/ms-python.debugpy-2025.6.0-linux-x64/bundled/libs/debugpy/adapter/../../debugpy/launcher/../../debugpy/../debugpy/server/cli.py", line 501, in main
+    run()
+  File "/home/ubuntu/.vscode-server/extensions/ms-python.debugpy-2025.6.0-linux-x64/bundled/libs/debugpy/adapter/../../debugpy/launcher/../../debugpy/../debugpy/server/cli.py", line 351, in run_file
+    runpy.run_path(target, run_name="__main__")
+  File "/home/ubuntu/.vscode-server/extensions/ms-python.debugpy-2025.6.0-linux-x64/bundled/libs/debugpy/_vendored/pydevd/_pydevd_bundle/pydevd_runpy.py", line 310, in run_path
+    return _run_module_code(code, init_globals, run_name, pkg_name=pkg_name, script_name=fname)
+  File "/home/ubuntu/.vscode-server/extensions/ms-python.debugpy-2025.6.0-linux-x64/bundled/libs/debugpy/_vendored/pydevd/_pydevd_bundle/pydevd_runpy.py", line 127, in _run_module_code
+    _run_code(code, mod_globals, init_globals, mod_name, mod_spec, pkg_name, script_name)
+  File "/home/ubuntu/.vscode-server/extensions/ms-python.debugpy-2025.6.0-linux-x64/bundled/libs/debugpy/_vendored/pydevd/_pydevd_bundle/pydevd_runpy.py", line 118, in _run_code
+    exec(code, run_globals)
+  File "/home/ubuntu/mbpo_uq/uambpo.py", line 222, in <module>
+    main(args=get_args())
+  File "/home/ubuntu/mbpo_uq/uambpo.py", line 74, in main
+    train(logger, run, model_logger, args, offline_buffer_train if offline_buffer_train is not None else None, )
+  File "/home/ubuntu/mbpo_uq/train.py", line 249, in train
+    trainer.train_policy()
+  File "/home/ubuntu/mbpo_uq/trainer.py", line 117, in train_policy
+    self.algo.rollout_transitions()
+  File "/home/ubuntu/mbpo_uq/algo/mopo.py", line 64, in rollout_transitions
+    next_observations, rewards, terminals, infos = self.dynamics_model.predict(observations, actions)
+  File "/home/ubuntu/miniconda3/envs/mopo/lib/python3.8/site-packages/torch/utils/_contextlib.py", line 116, in decorate_context
+    return func(*args, **kwargs)
+  File "/home/ubuntu/mbpo_uq/models/transition_model.py", line 159, in predict
+    pred_diff_means = pred_diff_means + np.random.normal(size=pred_diff_means.shape) * ensemble_model_stds
+KeyboardInterrupt

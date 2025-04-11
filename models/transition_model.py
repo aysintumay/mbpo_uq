@@ -222,10 +222,9 @@ class TransitionModel:
         self.model.load_state_dicts(self.model_best_snapshots)
 
     def save_model(self, info='dynamics_model'):
-        save_dir = os.path.join(util.logger.log_path, 'models')
-        if not os.path.exists(save_dir):
-            os.makedirs(save_dir)
-        model_save_dir = os.path.join(save_dir, "ite_{}".format(info))
+        model_save_dir = os.path.join(util.logger_model.log_path, info)
+        if not os.path.exists(model_save_dir):
+            os.makedirs(model_save_dir)
         if not os.path.exists(model_save_dir):
             os.makedirs(model_save_dir)
         for network_name, network in self.networks.items():
@@ -233,14 +232,12 @@ class TransitionModel:
             # Save the state_dict instead of the full model
             torch.save(network.state_dict(), save_path)
 
-            
-
 
     def load_model(self, info):
         util.logger.log_path = '/home/ubuntu/mopo/log/Abiomed-v0/mopo/seed_5_0331_161040-Abiomed_v0_mopo'
         # util.logger.log_path = '/home/ubuntu/mopo/log/halfcheetah-medium-replay-v0/mopo/seed_5_0403_215901-halfcheetah_medium_replay_v0_mopo'
-        save_dir = os.path.join(util.logger.log_path, 'models')
-        model_save_dir = os.path.join(save_dir, "ite_{}".format(info))
+        
+        model_save_dir = os.path.join(util.logger_model.log_path, info)
         for network_name, network in self.networks.items():
             load_path = os.path.join(model_save_dir, network_name + ".pt")
             state_dict = torch.load(load_path, map_location='cuda')

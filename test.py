@@ -23,69 +23,6 @@ from common.util import set_device_and_logger
 # from trainer import _evaluate, evaluate
 
 
-def get_args():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--algo-name", type=str, default="mopo")
-    # parser.add_argument("--task", type=str, default="walker2d-medium-replay-v2")
-    parser.add_argument("--replay", type=bool, default=False)
-    parser.add_argument("--policy_path" , type=str, default="log/halfcheetah_medium_plot/mopo/seed_5_0403_230811-halfcheetah_medium_replay_v0_mopo/policy_halfcheetah-medium-replay-v0.pth")
-
-    
-    parser.add_argument("--task", type=str, default="Abiomed-v0")
-    parser.add_argument("--seed", type=int, default=1)
-    parser.add_argument("--actor-lr", type=float, default=3e-4)
-    parser.add_argument("--critic-lr", type=float, default=3e-4)
-    parser.add_argument("--gamma", type=float, default=0.99)
-    parser.add_argument("--tau", type=float, default=0.005)
-    parser.add_argument("--alpha", type=float, default=0.2)
-    parser.add_argument('--auto-alpha', default=True)
-    parser.add_argument('--target-entropy', type=int, default=-1) #-actio_dim
-    parser.add_argument('--alpha-lr', type=float, default=3e-4)
-
-    # dynamics model's arguments
-    parser.add_argument("--dynamics-lr", type=float, default=0.001)
-    parser.add_argument("--n-ensembles", type=int, default=7)
-    parser.add_argument("--n-elites", type=int, default=5)
-    parser.add_argument("--reward-penalty-coef", type=float, default=1.0) #1e=6
-    parser.add_argument("--rollout-length", type=int, default=5) #1 
-    parser.add_argument("--rollout-batch-size", type=int, default=5000) #50000
-    parser.add_argument("--rollout-freq", type=int, default=1000)
-    parser.add_argument("--model-retain-epochs", type=int, default=5)
-    parser.add_argument("--real-ratio", type=float, default=0.05)
-    parser.add_argument("--dynamics-model-dir", type=str, default=None)
-
-    parser.add_argument("--epoch", type=int, default=1) #1000
-    parser.add_argument("--step-per-epoch", type=int, default=1000)
-    parser.add_argument("--eval_episodes", type=int, default=500)
-    parser.add_argument("--batch-size", type=int, default=256)
-    parser.add_argument("--logdir", type=str, default="log")
-    parser.add_argument("--log-freq", type=int, default=1000)
-    parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu")
-
-    #world transformer arguments
-    parser.add_argument('-seq_dim', '--seq_dim', type=int, metavar='<dim>', default=12,
-                        help='Specify the sequence dimension.')
-    parser.add_argument('-output_dim', '--output_dim', type=int, metavar='<dim>', default=11*12,
-                        help='Specify the sequence dimension.')
-    parser.add_argument('-bc', '--bc', type=int, metavar='<size>', default=64,
-                        help='Specify the batch size.')
-    parser.add_argument('-nepochs', '--nepochs', type=int, metavar='<epochs>', default=20,
-                        help='Specify the number of epochs to train for.')
-    parser.add_argument('-encoder_size', '--encs', type=int, metavar='<size>', default=2,
-                help='Set the number of encoder layers.') 
-    parser.add_argument('-lr', '--lr', type=float, metavar='<size>', default=0.001,
-                        help='Specify the learning rate.')
-    parser.add_argument('-encoder_dropout', '--encoder_dropout', type=float, metavar='<size>', default=0.1,
-                help='Set the tunable dropout.')
-    parser.add_argument('-decoder_dropout', '--decoder_dropout', type=float, metavar='<size>', default=0,
-                help='Set the tunable dropout.')
-    parser.add_argument('-dim_model', '--dim_model', type=int, metavar='<size>', default=256,
-                help='Set the number of encoder layers.')
-    parser.add_argument('-path', '--path', type=str, metavar='<cohort>', 
-                        default='/data/abiomed_tmp/processed',
-                        help='Specify the path to read data.')
-    return parser.parse_args()
-
 
 
 def _evaluate(policy, eval_env, episodes):
@@ -122,98 +59,26 @@ def _evaluate(policy, eval_env, episodes):
         }
 
 
-def evaluate(policy, env, trainer, i, episodes=500, step_per_epoch = 1000):  
-    policy.eval()
-    obs = env.reset()
-    
-    eval_ep_info_buffer = []
-    num_episodes = 0
-    episode_reward, episode_length = 0, 0
-    acc_total = 0
-    acc_1_off_total = 0
-    terminal_counter = 0
-    obs_ = []
-    next_obs_ = []
-    action_ = []
-    full_action_ = []
-    reward_ = []
-    terminal_ = []
-
-    while num_episodes <= episodes:
-        act = env.get_pl()
-        if num_episodes % 2 == 0:
-            next_state_gt = env.get_next_obs() #next state gt
-        else:
-            next_state_gt = env.get_obs()
-        action = policy.sample_action(obs, deterministic=True)
-        action = action.repeat(90) #repeat the action for 90 steps
-
-        full_pl = env.get_full_pl()
-        next_obs, reward, terminal, _ = env.step(action) #next state predictions
-        # print(f'reward func rew:{reward}')
-        #obs: (0,90) next_state_gt:(90,180) next_obs: (90,180), action: (90,180) act: (90,180)
-        
-        episode_reward += reward
-        episode_length += 1
-
-        terminal_counter += 1
-        acc, acc_1_off = trainer.eval_bcq(action, full_pl)
-        acc_total += acc
-        acc_1_off_total += acc_1_off
-
-        obs = next_obs.reshape(1,-1)
-
-        if terminal_counter == step_per_epoch:
-
-            # trainer.plot_predictions_rl(obs.reshape(1,90,12), next_state_gt.reshape(1,90,12), next_obs.reshape(1,90,12), action.reshape(1,90), full_pl.reshape(1,90), i)
-            eval_ep_info_buffer.append(
-                {"episode_reward": episode_reward,
-                    "episode_length": episode_length,
-                    "episode_accurcy": acc_total/step_per_epoch, 
-                    "episode_1_off_accuracy": acc_1_off_total/step_per_epoch}
-            )
-            terminal_counter = 0
-            episode_reward, episode_length = 0, 0
-            acc_total, acc_1_off_total = 0, 0
-            obs = env.reset()
-            num_episodes +=1
-
-            print("episode_reward", episode_reward, 
-                  "episode_length", episode_length,
-                  "episode_accuracy", acc_total/step_per_epoch, 
-                  "episode_1_off_accuracy", acc_1_off_total/step_per_epoch)
-            
-        obs_.append(obs)
-        next_obs_.append(next_obs)
-        action_.append(action)
-        full_action_.append(full_pl)
-        reward_.append(reward)
-        terminal_.append(terminal)
-
-    dataset = {
-                'observations': np.array(obs_),
-                'actions': np.array(action_).reshape(-1, 1),  # Reshape to ensure it's 2D
-                'rewards': np.array(reward_),
-                'terminals': np.array(terminal),
-                'next_observations': np.array(next_obs_),
-            }
-            
-
-    return {
-        "eval/episode_reward": [ep_info["episode_reward"] for ep_info in eval_ep_info_buffer],
-        "eval/episode_length": [ep_info["episode_length"] for ep_info in eval_ep_info_buffer],
-        "eval/episode_accuracy": [ep_info["episode_accurcy"] for ep_info in eval_ep_info_buffer],
-        "eval/episode_1_off_accuracy": [ep_info["episode_1_off_accuracy"] for ep_info in eval_ep_info_buffer],
-    }, dataset
 
 
-def get_eval(policy, env, logger, trainer, i, args,):
+
+
+def get_eval(policy, env, logger, trainer, args,):
+
     reward_l, acc_l, off_acc = [], [], []
     reward_std_l, acc_std_l, off_acc_std = [], [], []
+
+    trainer.eval_env = env
+    trainer.algo.policy = policy
+
     if args.task == 'Abiomed-v0':
-        eval_info, dataset = evaluate(policy, env, trainer, args.eval_episodes, args.step_per_epoch, i)
+        eval_info, dataset = trainer.evaluate()
     else:
+
+        #TODO: add eval function for d4rl   
         eval_info, dataset = _evaluate(policy, env, args.eval_episodes)
+
+
     ep_reward_mean, ep_reward_std = np.mean(eval_info["eval/episode_reward"]), np.std(eval_info["eval/episode_reward"])
     ep_length_mean, ep_length_std = np.mean(eval_info["eval/episode_length"]), np.std(eval_info["eval/episode_length"])
     if args.task == 'Abiomed-v0':
@@ -254,7 +119,7 @@ def get_eval(policy, env, logger, trainer, i, args,):
 
 
 
-def test(i, run, args=get_args(), offline_buffer=None, log_path=None):
+def test(i, run, args, model_logger, norm_info, offline_buffer=None, log_path=None):
 
 
     log_path = os.path.join(log_path, 'test',  f'ite_{i}', args.mode)
@@ -263,29 +128,30 @@ def test(i, run, args=get_args(), offline_buffer=None, log_path=None):
     logger = Logger(writer=writer,log_path=log_path)
 
     Devid = 0 if args.device == 'cuda' else -1
-    set_device_and_logger(Devid,logger)
+    set_device_and_logger(Devid,logger, model_logger)
 
     # create env and dataset
-    if offline_buffer is None:
-        if args.task == "Abiomed-v0":
-            gym.envs.registration.register(
+   
+    if args.task == "Abiomed-v0":
+        # Register the environment only once
+        gym.envs.registration.register(
             id='Abiomed-v0',
             entry_point='abiomed_env:AbiomedEnv',  
-            max_episode_steps = 1000,
-            )
-            env = gym.make(args.task, args = args, logger = logger, data_name = args.data_name, pretrained = args.pretrained)
-            dataset = d4rl.qlearning_dataset(env)
-        else:
-            env = gym.make(args.task)
-            dataset = d4rl.qlearning_dataset(env)
-        args.obs_shape = env.observation_space.shape
-        args.action_dim  = np.prod(env.action_space.shape)
+            max_episode_steps=1000,
+        )
+        # Build kwargs based on whether offline_buffer is provided
+        kwargs = {"args": args, "logger": logger, "data_name": "test", 'scaler_info': norm_info}
+        if offline_buffer is not None:
+            kwargs["offline_buffer"] = offline_buffer
+        env = gym.make(args.task, **kwargs)
     else:
-        args.obs_shape = env.observation_space.shape
-        args.action_dim  = np.prod(env.action_space.shape)
+        env = gym.make(args.task)
+
+    dataset = d4rl.qlearning_dataset(env)
+    args.obs_shape = env.observation_space.shape
+    args.action_dim = np.prod(env.action_space.shape)
 
     
-
     env.seed(args.seed)
 
 
@@ -393,12 +259,10 @@ def test(i, run, args=get_args(), offline_buffer=None, log_path=None):
         
     )
     
-    policy_state_dict = torch.load(args.policy_path, map_location=args.device)
-    # policy_state_dict = torch.load(os.path.join(log_path, f'policy_{args.task}'), map_location=args.device)
+    policy_state_dict = torch.load(os.path.join(model_logger.log_path, f'policy_{args.task}.pth'))
     sac_policy.load_state_dict(policy_state_dict)
 
-
-    dataset = get_eval(sac_policy, env, logger, trainer, i, args)
+    get_eval(sac_policy, env, logger, trainer, args)
 
     return dataset
 

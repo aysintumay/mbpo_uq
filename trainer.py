@@ -7,6 +7,8 @@ from matplotlib import pyplot as plt
 
 from tqdm import tqdm
 
+from common import util
+
 
 def plot_accuracy(mean_acc, std_acc, name=''):
     epochs = np.arange(mean_acc.shape[0])
@@ -132,7 +134,7 @@ class Trainer:
                     t.update(1)
             # evaluate current policy
             if self.eval_env.id == 'Abiomed-v0':
-                eval_info = self.evaluate()
+                eval_info, _ = self.evaluate()
                 ep_reward_mean, ep_reward_std = np.mean(eval_info["eval/episode_reward"]), np.std(eval_info["eval/episode_reward"])
                 ep_length_mean, ep_length_std = np.mean(eval_info["eval/episode_length"]), np.std(eval_info["eval/episode_length"])
                 ep_accuracy_mean, ep_accuracy_std = np.mean(eval_info["eval/episode_accuracy"]), np.std(eval_info["eval/episode_accuracy"])
@@ -164,8 +166,10 @@ class Trainer:
                             )
             
             # save policy
-            torch.save(self.algo.policy.state_dict(), os.path.join(self.logger.writer.get_logdir(), f"policy_{self.env_name}.pth"))
-        #plot q_values for each epoch
+            model_save_dir = util.logger_model.log_path
+            if not os.path.exists(model_save_dir):
+                os.makedirs(model_save_dir)
+            torch.save(self.algo.policy.state_dict(), os.path.join(model_save_dir, f"policy_{self.env_name}.pth"))        #plot q_values for each epoch
         plot_q_value(np.array(q1_l).reshape(-1,1), 'Q1')
         plot_q_value(np.array(q2_l).reshape(-1,1), 'Q2')
         plot_q_value(np.array(q_l).reshape(-1,1), 'Q')
@@ -240,16 +244,16 @@ class Trainer:
             action = action.repeat(90) #repeat the action for 90 steps
 
             full_pl = self.eval_env.get_full_pl()
-            next_obs, reward, terminal, crps = self.eval_env.step(action) #next state predictions
+            next_obs, reward, terminal, info = self.eval_env.step(action) #next state predictions
             # print(f'reward func rew:{reward}')
             #obs: (0,90) next_state_gt:(90,180) next_obs: (90,180), action: (90,180) act: (90,180)
-            crps_list.extend(crps)
+            crps_list.extend(info['crps'])
             episode_reward += reward
             episode_length += 1
 
             terminal_counter += 1
             
-            acc, acc_1_off =self.eval_bcq(action, full_pl)
+            acc, acc_1_off = self.eval_bcq(action, full_pl)
             acc_total += acc
             acc_1_off_total += acc_1_off
 
@@ -261,14 +265,17 @@ class Trainer:
                 eval_ep_info_buffer.append(
                     {"episode_reward": episode_reward,
                       "episode_length": episode_length,
-                        "episode_accurcy": acc_total/self._eval_episodes, 
-                        "episode_1_off_accuracy": acc_1_off_total/self._eval_episodes}
+                        "episode_accurcy": acc_total/self._step_per_epoch, 
+                        "episode_1_off_accuracy": acc_1_off_total/self._step_per_epoch}
                 )
                 num_episodes +=1
                 terminal_counter = 0
                 episode_reward, episode_length = 0, 0
                 obs = self.eval_env.reset()
-                
+                # print("episode_reward", episode_reward, 
+                #   "episode_length", episode_length,
+                #   "episode_accuracy", acc_total/self._step_per_epoch, 
+                #   "episode_1_off_accuracy", acc_1_off_total/self._step_per_epoch)
                 
             obs = next_obs.reshape(1,-1) #used to use the prediction as the next state but now it is the ground truth
             #obs, next_obs, reward, done
@@ -280,13 +287,22 @@ class Trainer:
             reward_.append(reward)
             terminal_.append(terminal)
 
-      
+        #need actions to be unnormalized for plotting
+        action_ = self.eval_env.unnormalize(np.array(action_), idx=np.arange(12))
+        dataset = {
+                'observations': np.array(obs_),
+                'actions': np.array(action_).reshape(-1, 1),  # Reshape to ensure it's 2D
+                'rewards': np.array(reward_),
+                'terminals': np.array(terminal),
+                'next_observations': np.array(next_obs_),
+            }
+        
         return {
             "eval/episode_reward": [ep_info["episode_reward"] for ep_info in eval_ep_info_buffer],
             "eval/episode_length": [ep_info["episode_length"] for ep_info in eval_ep_info_buffer],
             "eval/episode_accuracy": [ep_info["episode_accurcy"] for ep_info in eval_ep_info_buffer],
             "eval/episode_1_off_accuracy": [ep_info["episode_1_off_accuracy"] for ep_info in eval_ep_info_buffer],
-        }
+        }, dataset
 
 
     def plot_predictions_rl(self, src, tgt_full, pred, pl, pred_pl,iter):

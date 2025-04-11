@@ -3,6 +3,7 @@
 import csv
 import os
 import re
+import pickle
 
 import numpy as np
 import pandas as pd
@@ -12,6 +13,8 @@ import tqdm
 import argparse
 
 from tensorboard.backend.event_processing import event_accumulator
+
+from abiomed_env import AbiomedEnv
 
 COLORS = (
     [
@@ -136,6 +139,45 @@ def plot_figure(root_dir, task, algo_list, x_label, y_label, title, smooth_radiu
     ax.legend()
     
 
+def plot_histogram(data, y_label,):
+    color = [f'tab:{COLORS[0]}', f'tab:{COLORS[1]}', f'tab:{COLORS[2]}']
+    """
+    Plot histograms of data[1][y_label], data[2][y_label], data[3][y_label],
+    each in its own color.
+    
+    Parameters
+    ----------
+    data : dict of DataFrame-like
+        data[i][y_label] should be iterable of values.
+    y_label : str
+        Column/key to plot.
+    """
+    plt.figure(figsize=(8, 5))
+    
+    # Loop over the three iterations
+    for i, color in zip(np.arange(4), COLORS):
+        plt.hist(
+            data[i][y_label],
+            bins=50,
+            density=True,
+            alpha=0.6,        # semi‐transparent so overlaps show
+            color=color,
+            label=f'Iteration {i}' if i != 0 else 'Ground Truth',
+        )
+    
+    plt.xlabel(y_label)
+    plt.ylabel('Count')
+    plt.title(f'Histogram of {y_label} over {i} iterations')
+    plt.legend()
+    plt.tight_layout()
+    out_file = os.path.join(args.output_path, f'{y_label}.png')
+    plt.savefig(out_file, dpi=args.dpi, bbox_inches='tight')
+    plt.show()
+
+
+
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='plotter')
     parser.add_argument(
@@ -159,6 +201,12 @@ if __name__ == '__main__':
         '--ylabel', default='episode_reward', help='matplotlib figure ylabel'
     )
     parser.add_argument(
+        '--hist_ylabel', default='actions', help='matplotlib figure ylabel'
+    )
+    parser.add_argument(
+        '--hist_ylabel2', default='rewards', help='matplotlib figure ylabel'
+    )
+    parser.add_argument(
         '--smooth', type=int, default=10, help='smooth radius of y axis (default: 0)'
     )
     parser.add_argument(
@@ -166,22 +214,37 @@ if __name__ == '__main__':
     )
     parser.add_argument('--show', action='store_true', help='show figure')
     parser.add_argument(
-        '--output-path', type=str, help='figure save path', default="./figure.png"
+        '--output-path', type=str, help='figure save path', default="results"
     )
+    parser.add_argument(
+        '--data-path', type=str, help='figure save path', default="intermediate_data"
+    )
+
+
     parser.add_argument(
         '--dpi', type=int, default=200, help='figure dpi (default: 200)'
     )
     args = parser.parse_args()
 
-    # args.task = 'halfcheetah_plot'
-    for algo in args.algos:
-        path = os.path.join(args.root_dir, args.task, algo)
-        result = convert_tfenvents_to_csv(path, args.xlabel, args.ylabel)
-        merge_csv(result, path, args.xlabel, args.ylabel)
+    # for algo in args.algos:
+    #     path = os.path.join(args.root_dir, args.task, algo)
+    #     result = convert_tfenvents_to_csv(path, args.xlabel, args.ylabel)
+    #     merge_csv(result, path, args.xlabel, args.ylabel)
 
-    # plt.style.use('seaborn')
-    plot_figure(root_dir=args.root_dir, task=args.task, algo_list=args.algos, x_label=args.xlabel, y_label=args.ylabel, title=args.title, smooth_radius=args.smooth, color_list=args.colors)
-    if args.output_path:
-        plt.savefig(args.output_path, dpi=args.dpi, bbox_inches='tight')
-    if args.show:
-        plt.show()
+    # # plt.style.use('seaborn')
+    # plot_figure(root_dir=args.root_dir, task=args.task, algo_list=args.algos, x_label=args.xlabel, y_label=args.ylabel, title=args.title, smooth_radius=args.smooth, color_list=args.colors)
+    # if args.output_path:
+    #     plt.savefig(os.path.join(args.output_path, 'return.png'), dpi=args.dpi, bbox_inches='tight')
+    # if args.show:
+    #     plt.show()
+
+    #plot p-lvl and rewards by opening the pkl's file
+    data = {}
+    for i in range(0, 4):
+        test_path = os.path.join(args.data_path, f"dataset_test_{i}.pkl")
+        with open(test_path, 'rb') as f:
+            data[i] = pickle.load(f)
+    plot_histogram(data, args.hist_ylabel)
+    
+    plot_histogram(data, args.hist_ylabel2)
+        

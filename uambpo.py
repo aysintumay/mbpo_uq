@@ -1,4 +1,5 @@
 import argparse
+import pickle
 import time
 import os
 import datetime
@@ -43,12 +44,15 @@ def main(args):
     t0 = datetime.datetime.now().strftime("%m%d_%H%M%S")
     log_file = f'seed_{args.seed}_{t0}-{args.task.replace("-", "_")}_{args.algo_name}'
     log_path = os.path.join(args.logdir, args.task, args.algo_name, log_file)
+
+    model_path = os.path.join(args.model_path, args.task, args.algo_name, log_file)
     writer = SummaryWriter(log_path)
     writer.add_text("args", str(args))
     logger = Logger(writer=writer,log_path=log_path)
+    model_logger = Logger(writer=writer,log_path=model_path)
 
-    Devid = args.cuda_number if args.device == 'cuda' else -1
-    set_device_and_logger(Devid,logger)
+    Devid = 0 if args.device == 'cuda' else -1
+    set_device_and_logger(Devid, logger, model_logger)
 
     iterations = 3
 
@@ -64,48 +68,65 @@ def main(args):
             args.pretrained = True
             # train_args.replay = True
 
-        args.pretrained = True     #to be fast 
+        
+        args.data_name = 'train'    
         #train on offline dataset or replayed dataset
-        train(logger, run, args, offline_buffer_train if offline_buffer_train is not None else None, )
+        norm_info = train(logger, run, model_logger, args, norm_info, offline_buffer_train if offline_buffer_train is not None else None, )
+        # args.policy_path = os.path.join(log_path, f"policy_{args.task}.pth")
 
         #get renewed train dataset of 50k
-        args.eval_episodes = 50000
+        args.step_per_epoch = 10 #49939
         args.data_name = 'train'
-        args.policy_path = args.policy_path
+        # args.policy_path = args.policy_path
 
         args.mode = 'offline'
-        dataset_train = test(i, run, args, offline_buffer_train if offline_buffer_train is not None else None, log_path)
-        # get_returns()
+        args.pretrained = True
+
+        print('pretrained', args.pretrained, '\nstarted testing')
+        dataset_train = test(i, run, args, model_logger, norm_info,  offline_buffer_train if offline_buffer_train is not None else None, log_path)
+
+        #save the dataset
+        with open(os.path.join('intermediate_data',f'dataset_train_{i+1}.pkl'), 'wb') as f:
+            pickle.dump(dataset_train, f)
 
         #get renewed test dataset of 20k
         args.data_name = 'test'
-        args.eval_episodes = 20000
+        args.step_per_epoch = 10 #28015
         args.mode = 'online'
+        args.pretrained = True
 
-        dataset_test = test(i, run, args, offline_buffer_test if offline_buffer_test is not None else None, log_path)
-        # get_returns()
+        print('offline_buffer_train', offline_buffer_train  , 'pretrained', args.pretrained, '\nstarted testing')
+        dataset_test = test(i, run, args,model_logger, offline_buffer_test if offline_buffer_test is not None else None, log_path)
+        #save the dataset
+        with open(os.path.join('intermediate_data',f'dataset_test_{i+1}.pkl'), 'wb') as f:
+            pickle.dump(dataset_train, f)
 
-        obs_shape = 1080
-        action_dim = 1
-        offline_buffer_train = ReplayBuffer(
-            buffer_size=len(dataset_train["observations"]),
-            obs_shape=(obs_shape,),
-            obs_dtype=np.float32,
-            action_dim=action_dim,
-            action_dtype=np.float32
-        )
+        offline_buffer_train = dataset_train
+        offline_buffer_test = dataset_test
 
-        offline_buffer_train.load_dataset(dataset_train)
+        norm_info['scaler'] = None
+        # obs_shape = 1080
+        # action_dim = 1
+        # offline_buffer_train = ReplayBuffer(
+        #     buffer_size=len(dataset_train["observations"]),
+        #     obs_shape=(obs_shape,),
+        #     obs_dtype=np.float32,
+        #     action_dim=action_dim,
+        #     action_dtype=np.float32
+        # )
 
-        offline_buffer_test = ReplayBuffer(
-            buffer_size=len(dataset_test["observations"]),
-            obs_shape=(obs_shape,),
-            obs_dtype=np.float32,
-            action_dim=action_dim,
-            action_dtype=np.float32
-        )
-        offline_buffer_test.load_dataset(dataset_test)
+        # offline_buffer_train.load_dataset(dataset_train)
 
+        # offline_buffer_test = ReplayBuffer(
+        #     buffer_size=len(dataset_test["observations"]),
+        #     obs_shape=(obs_shape,),
+        #     obs_dtype=np.float32,
+        #     action_dim=action_dim,
+        #     action_dtype=np.float32
+        # )
+        # offline_buffer_test.load_dataset(dataset_test)
+
+   
         
 def get_args():
     parser = argparse.ArgumentParser()
@@ -113,7 +134,8 @@ def get_args():
     parser.add_argument("--pretrained", type=bool, default=True)
     parser.add_argument("--mode", type=str, default="offline")
     # parser.add_argument("--task", type=str, default="walker2d-medium-replay-v2")
-    parser.add_argument("--policy_path" , type=str, default="log/Abiomed-v0/mopo/seed_5_0331_215447-Abiomed_v0_mopo/policy.pth")
+    parser.add_argument("--policy_path" , type=str, default="")
+    parser.add_argument("--model_path" , type=str, default="saved_models")
     parser.add_argument('-cuda', '--cuda_number', type=str, metavar='<device>', default=2, #required=True,
                         help='Specify the CUDA device number to use.')
 
@@ -141,8 +163,8 @@ def get_args():
     parser.add_argument("--dynamics-model-dir", type=str, default=None)
 
     parser.add_argument("--epoch", type=int, default=1) #1000
-    parser.add_argument("--step-per-epoch", type=int, default=1)
-    parser.add_argument("--eval_episodes", type=int, default=1)
+    parser.add_argument("--step-per-epoch", type=int, default=2) # will be equated to #of samples in train and test
+    parser.add_argument("--eval_episodes", type=int, default=1) #
     parser.add_argument("--batch-size", type=int, default=256)
     parser.add_argument("--logdir", type=str, default="log")
     parser.add_argument("--log-freq", type=int, default=1000)
@@ -155,7 +177,7 @@ def get_args():
                         help='Specify the sequence dimension.')
     parser.add_argument('-bc', '--bc', type=int, metavar='<size>', default=64,
                         help='Specify the batch size.')
-    parser.add_argument('-nepochs', '--nepochs', type=int, metavar='<epochs>', default=20,
+    parser.add_argument('-nepochs', '--nepochs', type=int, metavar='<epochs>', default=1,
                         help='Specify the number of epochs to train for.')
     parser.add_argument('-encoder_size', '--encs', type=int, metavar='<size>', default=2,
                 help='Set the number of encoder layers.') 

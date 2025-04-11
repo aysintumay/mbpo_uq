@@ -1,5 +1,6 @@
 import argparse
 import datetime
+import pickle
 import os
 import random
 import importlib
@@ -85,7 +86,7 @@ def get_args():
     return parser.parse_args()
 
 
-def train(logger, run, args=get_args(), offline_buffer = None, ):
+def train(logger, run, model_logger, args, scaler_info, offline_buffer = None, ):
 
 
 # create env and dataset
@@ -97,7 +98,7 @@ def train(logger, run, args=get_args(), offline_buffer = None, ):
             max_episode_steps=1000,
         )
         # Build kwargs based on whether offline_buffer is provided
-        kwargs = {"args": args, "logger": logger, "data_name": "train", "pretrained": args.pretrained}
+        kwargs = {"args": args, "logger": logger, "data_name": "train", "scaler_info": scaler_info}
         if offline_buffer is not None:
             kwargs["offline_buffer"] = offline_buffer
         env = gym.make(args.task, **kwargs)
@@ -108,7 +109,12 @@ def train(logger, run, args=get_args(), offline_buffer = None, ):
     args.obs_shape = env.observation_space.shape
     args.action_dim = np.prod(env.action_space.shape)
 
+   
+
     env.seed(args.seed)
+
+    with open(os.path.join('intermediate_data',f'dataset_train_0.pkl'), 'wb') as f:
+            pickle.dump(dataset, f)
 
 
     # import configs
@@ -138,9 +144,9 @@ def train(logger, run, args=get_args(), offline_buffer = None, ):
     critic2_optim = torch.optim.Adam(critic2.parameters(), lr=args.critic_lr)
 
     if args.auto_alpha:
-        target_entropy = args.target_entropy if args.target_entropy \
-            else -np.prod(env.action_space.shape)
-
+        # target_entropy = args.target_entropy if args.target_entropy \
+        #     else -np.prod(env.action_space.shape)
+        target_entropy = -np.prod(env.action_space.shape)
         args.target_entropy = target_entropy
 
         log_alpha = torch.zeros(1, requires_grad=True, device=args.device)
@@ -172,24 +178,36 @@ def train(logger, run, args=get_args(), offline_buffer = None, ):
                                      )    
       
 
-    # create buffer
-    offline_buffer = ReplayBuffer(
-        buffer_size=len(dataset["observations"]),
-        obs_shape=args.obs_shape,
-        obs_dtype=np.float32,
-        action_dim=args.action_dim,
-        action_dtype=np.float32
-    )
+    
 
-    offline_buffer.load_dataset(dataset)
+
+    if offline_buffer is None:
+        # load offline buffer
+        # create buffer
+        offline_buffer = ReplayBuffer(
+            buffer_size=len(dataset["observations"]),
+            obs_shape=args.obs_shape,
+            obs_dtype=np.float32,
+            action_dim=args.action_dim,
+            action_dtype=np.float32
+        )
+
+        offline_buffer.load_dataset(dataset)
+        
+        sac_policy = sac_policy
+        
+    else:
+        # load offline buffer
+        policy_state_dict = torch.load(os.path.join(model_logger.log_path, f'policy_{args.task}.pth'))
+        sac_policy.load_state_dict(policy_state_dict)
+      
     model_buffer = ReplayBuffer(
-        buffer_size=args.rollout_batch_size * args.rollout_length * args.model_retain_epochs,
-        obs_shape=args.obs_shape,
-        obs_dtype=np.float32,
-        action_dim=args.action_dim,
-        action_dtype=np.float32
-    )
-
+            buffer_size=args.rollout_batch_size * args.rollout_length * args.model_retain_epochs,
+            obs_shape=args.obs_shape,
+            obs_dtype=np.float32,
+            action_dim=args.action_dim,
+            action_dtype=np.float32
+        )
     # create MOPO algo
     algo = MOPO(
         sac_policy,
@@ -205,9 +223,9 @@ def train(logger, run, args=get_args(), offline_buffer = None, ):
     )
     #load world model
 
-    dynamics_model.load_model(f'dynamics_model') 
+    # dynamics_model.load_model(f'dynamics_model') 
 
-   
+    
     # create trainer
     trainer = Trainer(
         algo,
@@ -231,6 +249,11 @@ def train(logger, run, args=get_args(), offline_buffer = None, ):
     
     # begin train
     trainer.train_policy()
+    return  {
+        'rwd_stds': env.rwd_stds,
+        'rwd_means': env.rwd_means, 
+        'scaler': env.scaler
+        }
 
 
 if __name__ == "__main__":
