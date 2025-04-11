@@ -1,7 +1,0 @@
-{"time":"2025-04-11T05:57:33.961020745Z","level":"INFO","msg":"stream: starting","core version":"0.19.8","symlink path":"/home/ubuntu/mbpo_uq/wandb/run-20250411_055733-50frdp56/logs/debug-core.log"}
-{"time":"2025-04-11T05:57:34.178835841Z","level":"INFO","msg":"created new stream","id":"50frdp56"}
-{"time":"2025-04-11T05:57:34.178908262Z","level":"INFO","msg":"stream: started","id":"50frdp56"}
-{"time":"2025-04-11T05:57:34.178962352Z","level":"INFO","msg":"writer: Do: started","stream_id":"50frdp56"}
-{"time":"2025-04-11T05:57:34.179007133Z","level":"INFO","msg":"sender: started","stream_id":"50frdp56"}
-{"time":"2025-04-11T05:57:34.179117024Z","level":"INFO","msg":"handler: started","stream_id":"50frdp56"}
-{"time":"2025-04-11T05:57:34.376376025Z","level":"INFO","msg":"Starting system monitor"}

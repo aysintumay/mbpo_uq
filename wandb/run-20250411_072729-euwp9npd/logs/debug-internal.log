@@ -1,7 +1,0 @@
-{"time":"2025-04-11T07:27:29.411784947Z","level":"INFO","msg":"stream: starting","core version":"0.19.8","symlink path":"/home/ubuntu/mbpo_uq/wandb/run-20250411_072729-euwp9npd/logs/debug-core.log"}
-{"time":"2025-04-11T07:27:29.625405492Z","level":"INFO","msg":"created new stream","id":"euwp9npd"}
-{"time":"2025-04-11T07:27:29.625498204Z","level":"INFO","msg":"stream: started","id":"euwp9npd"}
-{"time":"2025-04-11T07:27:29.625655555Z","level":"INFO","msg":"writer: Do: started","stream_id":"euwp9npd"}
-{"time":"2025-04-11T07:27:29.625699356Z","level":"INFO","msg":"sender: started","stream_id":"euwp9npd"}
-{"time":"2025-04-11T07:27:29.626512377Z","level":"INFO","msg":"handler: started","stream_id":"euwp9npd"}
-{"time":"2025-04-11T07:27:29.929051668Z","level":"INFO","msg":"Starting system monitor"}
