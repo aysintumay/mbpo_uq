@@ -205,7 +205,7 @@ class TimeSeriesTransformer(nn.Module):
         
         self.positional_encoding = self.create_positional_encoding(max_len, dim_model).to(self.device)
 
-        self.decoder = Decoder(input_size = dim_model+pl_shape, output_size = output_dim).to(self.device)
+        self.decoder = Decoder(input_size = dim_model+pl_shape, output_size = output_dim, dropout = decoder_dropout).to(self.device)
     
     def create_positional_encoding(self, max_len, dim_model):
         pe = torch.zeros(max_len, dim_model)

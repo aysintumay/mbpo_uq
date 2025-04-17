@@ -234,7 +234,7 @@ class TransitionModel:
 
 
     def load_model(self, info):
-        util.logger.log_path = '/home/ubuntu/mopo/log/Abiomed-v0/mopo/seed_5_0331_161040-Abiomed_v0_mopo'
+        # util.logger.log_path = '/home/ubuntu/mopo/log/Abiomed-v0/mopo/seed_5_0331_161040-Abiomed_v0_mopo'
         # util.logger.log_path = '/home/ubuntu/mopo/log/halfcheetah-medium-replay-v0/mopo/seed_5_0403_215901-halfcheetah_medium_replay_v0_mopo'
         
         model_save_dir = os.path.join(util.logger_model.log_path, info)

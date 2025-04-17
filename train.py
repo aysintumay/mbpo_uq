@@ -83,10 +83,13 @@ def get_args():
     parser.add_argument('-path', '--path', type=str, metavar='<cohort>', 
                         default='/data/abiomed_tmp/processed',
                         help='Specify the path to read data.')
+    parser.add_argument('-data_name', '--data_name', type=str, metavar='<size>', default='train',
+                help='which data to work on.')
+
     return parser.parse_args()
 
 
-def train(logger, run, model_logger, args, scaler_info, offline_buffer = None, ):
+def train(i, logger, run, model_logger, args, scaler_info, offline_buffer = None, ):
 
 
 # create env and dataset
@@ -98,10 +101,13 @@ def train(logger, run, model_logger, args, scaler_info, offline_buffer = None, )
             max_episode_steps=1000,
         )
         # Build kwargs based on whether offline_buffer is provided
-        kwargs = {"args": args, "logger": logger, "data_name": "train", "scaler_info": scaler_info}
+        kwargs = {"args": args, "logger": logger, "scaler_info": scaler_info}
         if offline_buffer is not None:
             kwargs["offline_buffer"] = offline_buffer
         env = gym.make(args.task, **kwargs)
+        #save trained world model
+        trained_w_m = env.world_model.trained_model
+        torch.save(trained_w_m, os.path.join(model_logger.log_path, f'world_model_{i}.pth'))
     else:
         env = gym.make(args.task)
 
@@ -113,8 +119,8 @@ def train(logger, run, model_logger, args, scaler_info, offline_buffer = None, )
 
     env.seed(args.seed)
 
-    with open(os.path.join('intermediate_data',f'dataset_train_0.pkl'), 'wb') as f:
-            pickle.dump(dataset, f)
+    # with open(os.path.join('intermediate_data',f'dataset_train_0.pkl'), 'wb') as f:
+    #         pickle.dump(dataset, f)
 
 
     # import configs
@@ -184,7 +190,21 @@ def train(logger, run, model_logger, args, scaler_info, offline_buffer = None, )
     if offline_buffer is None:
         # load offline buffer
         # create buffer
-        offline_buffer = ReplayBuffer(
+        
+        # DICTpolicy = torch.load('/home/ubuntu/mbpo_uq/saved_models/Abiomed-v0/mbpo_uq/seed_1_0413_044602-Abiomed_v0_mbpo_uq/policy_Abiomed-v0.pth')
+        # sac_policy.load_state_dict(DICTpolicy)
+        print('Policy to be trained!')
+        sac_policy = sac_policy
+        
+    else:
+        # load offline buffer
+        print(f'Policy loaded from{model_logger.log_path}!')
+
+        policy_state_dict = torch.load(os.path.join(model_logger.log_path, f'policy_{args.task}.pth'))
+        sac_policy.load_state_dict(policy_state_dict)
+      
+
+    offline_buffer = ReplayBuffer(
             buffer_size=len(dataset["observations"]),
             obs_shape=args.obs_shape,
             obs_dtype=np.float32,
@@ -192,15 +212,8 @@ def train(logger, run, model_logger, args, scaler_info, offline_buffer = None, )
             action_dtype=np.float32
         )
 
-        offline_buffer.load_dataset(dataset)
-        
-        sac_policy = sac_policy
-        
-    else:
-        # load offline buffer
-        policy_state_dict = torch.load(os.path.join(model_logger.log_path, f'policy_{args.task}.pth'))
-        sac_policy.load_state_dict(policy_state_dict)
-      
+    offline_buffer.load_dataset(dataset)
+
     model_buffer = ReplayBuffer(
             buffer_size=args.rollout_batch_size * args.rollout_length * args.model_retain_epochs,
             obs_shape=args.obs_shape,
@@ -243,17 +256,19 @@ def train(logger, run, model_logger, args, scaler_info, offline_buffer = None, )
     )
 
     # pretrain dynamics model on the whole dataset
-    # trainer.train_dynamics()
+    trainer.train_dynamics()
     #  
 
     
     # begin train
     trainer.train_policy()
+
+    
     return  {
         'rwd_stds': env.rwd_stds,
         'rwd_means': env.rwd_means, 
         'scaler': env.scaler
-        }
+        }, trainer
 
 
 if __name__ == "__main__":

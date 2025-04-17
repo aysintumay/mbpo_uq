@@ -6,6 +6,7 @@ import datetime
 import random
 import wandb
 import numpy as np
+import pandas as pd
 import torch
 from matplotlib import pyplot as plt
 
@@ -42,7 +43,8 @@ def main(args):
 
     # log
     t0 = datetime.datetime.now().strftime("%m%d_%H%M%S")
-    log_file = f'seed_{args.seed}_{t0}-{args.task.replace("-", "_")}_{args.algo_name}'
+    # log_file = f'seed_{args.seed}_{t0}-{args.task.replace("-", "_")}_{args.algo_name}'
+    log_file = 'seed_1_0413_220409-Abiomed_v0_mbpo_uq_rerun'
     log_path = os.path.join(args.logdir, args.task, args.algo_name, log_file)
 
     model_path = os.path.join(args.model_path, args.task, args.algo_name, log_file)
@@ -51,31 +53,49 @@ def main(args):
     logger = Logger(writer=writer,log_path=log_path)
     model_logger = Logger(writer=writer,log_path=model_path)
 
-    Devid = 0 if args.device == 'cuda' else -1
+    Devid = args.device_id if args.device == 'cuda' else -1
     set_device_and_logger(Devid, logger, model_logger)
 
-    iterations = 3
+    results = []
 
-    for i in range(iterations):
+    for i in np.arange(1,3):
         
         print(f"====================Iteration {i+1}====================")
         if i == 0:
-            args.pretrained = False
+            
             offline_buffer_train = None
             offline_buffer_test = None
-            # train_args.replay = False
-        else:
-            args.pretrained = True
-            # train_args.replay = True
-
+        norm_info = {'rwd_stds': None, 'rwd_means':None, 'scaler': None}
         
-        args.data_name = 'train'    
+        #offline buffer_load
+       
+        # with open(os.path.join('intermediate_data',f'dataset_train_0.pkl'), 'rb') as f:
+        #     offline_buffer_train = pickle.load(f)
+        # with open(os.path.join('intermediate_data',f'dataset_test_0.pkl'), 'rb') as f:
+        #     offline_buffer_test = pickle.load(f)
+
+        args.pretrained = False
+        args.data_name = 'train'  
+        args.step_per_epoch = 1000 #1000  
         #train on offline dataset or replayed dataset
-        norm_info = train(logger, run, model_logger, args, norm_info, offline_buffer_train if offline_buffer_train is not None else None, )
+        norm_info, trainer = train(i, logger, run, model_logger, args, norm_info, offline_buffer_train if offline_buffer_train is not None else None, )
+        
+        
+        #save the policy
+        policy = trainer.algo.policy
+        # trainer.algo.policy.load_state_dict(policy)
+        
+        os.makedirs(model_path, exist_ok=True)
+        #save policy
+        torch.save(policy.state_dict(), os.path.join(model_path, f"policy_{args.task}_{i}.pth"))
+        #save transition model
+        trainer.algo.save_dynamics_model(f"dynamics_model_{i}")
+        
+
         # args.policy_path = os.path.join(log_path, f"policy_{args.task}.pth")
 
         #get renewed train dataset of 50k
-        args.step_per_epoch = 10 #49939
+        args.step_per_epoch = 49939
         args.data_name = 'train'
         # args.policy_path = args.policy_path
 
@@ -83,49 +103,53 @@ def main(args):
         args.pretrained = True
 
         print('pretrained', args.pretrained, '\nstarted testing')
-        dataset_train = test(i, run, args, model_logger, norm_info,  offline_buffer_train if offline_buffer_train is not None else None, log_path)
+        print('log path ' , log_path)
+        dataset_train, _ = test(i, args, model_logger, norm_info, policy, trainer, offline_buffer_train if offline_buffer_train is not None else None, log_path)
 
         #save the dataset
+        if not os.path.exists('intermediate_data'):
+            os.makedirs('intermediate_data')
         with open(os.path.join('intermediate_data',f'dataset_train_{i+1}.pkl'), 'wb') as f:
             pickle.dump(dataset_train, f)
 
         #get renewed test dataset of 20k
         args.data_name = 'test'
-        args.step_per_epoch = 10 #28015
+        args.step_per_epoch = 28015
         args.mode = 'online'
         args.pretrained = True
 
-        print('offline_buffer_train', offline_buffer_train  , 'pretrained', args.pretrained, '\nstarted testing')
-        dataset_test = test(i, run, args,model_logger, offline_buffer_test if offline_buffer_test is not None else None, log_path)
+        print( 'pretrained', args.pretrained, '\nstarted testing')
+        dataset_test, eval_info = test(i, args,model_logger,norm_info, policy, trainer, offline_buffer_test if offline_buffer_test is not None else None, log_path)
         #save the dataset
         with open(os.path.join('intermediate_data',f'dataset_test_{i+1}.pkl'), 'wb') as f:
-            pickle.dump(dataset_train, f)
+            pickle.dump(dataset_test, f)
 
         offline_buffer_train = dataset_train
         offline_buffer_test = dataset_test
 
         norm_info['scaler'] = None
-        # obs_shape = 1080
-        # action_dim = 1
-        # offline_buffer_train = ReplayBuffer(
-        #     buffer_size=len(dataset_train["observations"]),
-        #     obs_shape=(obs_shape,),
-        #     obs_dtype=np.float32,
-        #     action_dim=action_dim,
-        #     action_dtype=np.float32
-        # )
 
-        # offline_buffer_train.load_dataset(dataset_train)
+        mean_return = np.mean(eval_info["eval/episode_reward"])
+        std_return = np.std(eval_info["eval/episode_reward"])
+        mean_length = np.mean(eval_info["eval/episode_length"])
+        std_length = np.std(eval_info["eval/episode_length"])
+        results.append({
+            'seed': args.seed,
+            'mean_return': mean_return,
+            'std_return': std_return,
+            'mean_length': mean_length,
+            'std_length': std_length
+        })
+        
+        wandb.log(f"Iteration {i} - Seed {args.seed} - Mean Return: {mean_return:.2f} ± {std_return:.2f}")
+        print(f"Iteration {i} - Seed {args.seed} - Mean Return: {mean_return:.2f} ± {std_return:.2f}")
 
-        # offline_buffer_test = ReplayBuffer(
-        #     buffer_size=len(dataset_test["observations"]),
-        #     obs_shape=(obs_shape,),
-        #     obs_dtype=np.float32,
-        #     action_dim=action_dim,
-        #     action_dtype=np.float32
-        # )
-        # offline_buffer_test.load_dataset(dataset_test)
 
+    os.makedirs(os.path.join('results', args.task, 'uambpo'), exist_ok=True)
+    results_df = pd.DataFrame(results)
+    results_path = os.path.join('results', args.task, 'uambpo', f"{args.task}_results_{t0}.csv")
+    results_df.to_csv(results_path, index=False)
+    print(f"Results saved to {results_path}")
    
         
 def get_args():
@@ -138,6 +162,10 @@ def get_args():
     parser.add_argument("--model_path" , type=str, default="saved_models")
     parser.add_argument('-cuda', '--cuda_number', type=str, metavar='<device>', default=2, #required=True,
                         help='Specify the CUDA device number to use.')
+    parser.add_argument('-data_name', '--data_name', type=str, metavar='<size>', default='train',
+                help='which data to work on.')
+    parser.add_argument("--device_id", type=int, default=7)
+
 
     parser.add_argument("--task", type=str, default="Abiomed-v0")
     parser.add_argument("--seed", type=int, default=1)
@@ -162,9 +190,9 @@ def get_args():
     parser.add_argument("--real-ratio", type=float, default=0.05)
     parser.add_argument("--dynamics-model-dir", type=str, default=None)
 
-    parser.add_argument("--epoch", type=int, default=1) #1000
-    parser.add_argument("--step-per-epoch", type=int, default=2) # will be equated to #of samples in train and test
-    parser.add_argument("--eval_episodes", type=int, default=1) #
+    parser.add_argument("--epoch", type=int, default=50) #1000 #change
+    parser.add_argument("--step-per-epoch", type=int, default=1000) # will be equated to #of samples in train and test #change
+    parser.add_argument("--eval_episodes", type=int, default=10) # #change
     parser.add_argument("--batch-size", type=int, default=256)
     parser.add_argument("--logdir", type=str, default="log")
     parser.add_argument("--log-freq", type=int, default=1000)
@@ -176,8 +204,8 @@ def get_args():
     parser.add_argument('-output_dim', '--output_dim', type=int, metavar='<dim>', default=11*12,
                         help='Specify the sequence dimension.')
     parser.add_argument('-bc', '--bc', type=int, metavar='<size>', default=64,
-                        help='Specify the batch size.')
-    parser.add_argument('-nepochs', '--nepochs', type=int, metavar='<epochs>', default=1,
+                        help='Specify the batch size.') 
+    parser.add_argument('-nepochs', '--nepochs', type=int, metavar='<epochs>', default=20, #change
                         help='Specify the number of epochs to train for.')
     parser.add_argument('-encoder_size', '--encs', type=int, metavar='<size>', default=2,
                 help='Set the number of encoder layers.') 

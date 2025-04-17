@@ -166,10 +166,10 @@ class Trainer:
                             )
             
             # save policy
-            model_save_dir = util.logger_model.log_path
-            if not os.path.exists(model_save_dir):
-                os.makedirs(model_save_dir)
-            torch.save(self.algo.policy.state_dict(), os.path.join(model_save_dir, f"policy_{self.env_name}.pth"))        #plot q_values for each epoch
+            # model_save_dir = util.logger_model.log_path
+            # if not os.path.exists(model_save_dir):
+            #     os.makedirs(model_save_dir)
+            # torch.save(self.algo.policy.state_dict(), os.path.join(model_save_dir, f"policy_{self.env_name}.pth"))        #plot q_values for each epoch
         plot_q_value(np.array(q1_l).reshape(-1,1), 'Q1')
         plot_q_value(np.array(q2_l).reshape(-1,1), 'Q2')
         plot_q_value(np.array(q_l).reshape(-1,1), 'Q')
@@ -186,6 +186,7 @@ class Trainer:
 
 
         self.logger.print("total time: {:.3f}s".format(time.time() - start_time))
+        
 
 
     def _evaluate(self):
@@ -259,7 +260,7 @@ class Trainer:
 
             if terminal_counter == self._step_per_epoch:
 
-                # self.plot_predictions_rl(obs.reshape(1,90,12), next_state_gt.reshape(1,90,12), next_obs.reshape(1,90,12), full_pl.reshape(1,90), action.reshape(1,90), num_episodes)
+                self.plot_predictions_rl(obs.reshape(1,90,12), next_state_gt.reshape(1,90,12), next_obs.reshape(1,90,12), full_pl.reshape(1,90), action.reshape(1,90), num_episodes)
 
                 # self.plot_predictions_rl(obs.reshape(1,90,12), next_state_gt.reshape(1,90,12), next_obs.reshape(1,90,12), action.reshape(1,90), act.reshape(1,90), num_episodes)
                 eval_ep_info_buffer.append(
@@ -288,13 +289,14 @@ class Trainer:
             terminal_.append(terminal)
 
         #need actions to be unnormalized for plotting
-        action_ = self.eval_env.unnormalize(np.array(action_), idx=np.arange(12))
+        action_ = self.eval_env.unnormalize(np.array(action_), idx=12)
         dataset = {
                 'observations': np.array(obs_),
                 'actions': np.array(action_).reshape(-1, 1),  # Reshape to ensure it's 2D
                 'rewards': np.array(reward_),
                 'terminals': np.array(terminal),
                 'next_observations': np.array(next_obs_),
+                'full_actions': np.array(full_action_).reshape(-1, 1),  # Reshape to ensure it's 2D
             }
         
         return {

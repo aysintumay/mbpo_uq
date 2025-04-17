@@ -1,14 +1,19 @@
 import gym
+import pickle 
+import os
 from gym import spaces
 import numpy as np
 import torch
-from models.world_transformer import WorldTransformer
 from tqdm import tqdm
 import scoring
 from sklearn.preprocessing import MinMaxScaler
 
+from common.buffer import ReplayBuffer
+from models.world_transformer import WorldTransformer
+
+
 class AbiomedEnv(gym.Env):
-    def __init__(self, args=None, logger=None, data_name='train', scaler_info=None, offline_buffer = None):
+    def __init__(self, args=None, logger=None, scaler_info=None, offline_buffer = None):
         super(AbiomedEnv, self).__init__()
         # Replace obs_dim and action_dim with actual dimensions
         self.observation_space = spaces.Box(low=-1, high=1, shape=(12*90,), dtype=np.float32)
@@ -19,14 +24,18 @@ class AbiomedEnv(gym.Env):
         self.offline_buffer = offline_buffer
         self.logger = logger
         self.args = args
-        self.data_name = data_name
+
+        self.scaler_info = scaler_info
+        self.rwd_means = scaler_info['rwd_means'] if scaler_info['rwd_means'] is not None else None
+        self.rwd_stds = scaler_info['rwd_stds'] if scaler_info['rwd_stds'] is not None else None
+        self.scaler = scaler_info['scaler'] if scaler_info['scaler'] else None
+
         self.world_model = WorldTransformer(args = self.args, logger = self.logger, pretrained = self.pretrained)
         # self.trained_world_model = self.world_model.load_model()
         self.data = self.load_data()
         self.current_index = 0
-        self.rwd_means = scaler_info['rwd_means'] if scaler_info else []
-        self.rwd_stds = scaler_info['rwd_stds'] if scaler_info else []
-        self.scaler = scaler_info['scaler'] if scaler_info['scaler'] else None
+
+        
 
 
     def load_data(self, offline_buffer=None):
@@ -86,34 +95,42 @@ class AbiomedEnv(gym.Env):
     
         if offline_buffer is None:
 
-            train = torch.load(f"/data/abiomed_tmp/processed/pp_{self.data_name}_amicgs.pt").numpy()
+            train = torch.load(f"/data/abiomed_tmp/processed/pp_{self.args.data_name}_amicgs.pt").numpy()
             
-            if self.data_name == 'train':
+            if self.args.data_name == 'train':
                 #dont take ID column
                 train = train[: ,:, :-1]
                 self.rwd_means = train.mean(axis=(0, 1))
                 self.rwd_stds = train.std(axis=(0, 1))
                 train_dict = generate_buffer(train)
+
+                if not os.path.exists('intermediate_data'):
+                    os.makedirs('intermediate_data')
+                with open(os.path.join('intermediate_data',f'dataset_train_0.pkl'), 'wb') as f:
+                    pickle.dump(train_dict, f)
                 
             else:
+                train = train[:, :, :-1]
                 train_dict = generate_buffer(train)
+                with open(os.path.join('intermediate_data',f'dataset_test_0.pkl'), 'wb') as f:
+                    pickle.dump(train_dict, f)
 
             return train_dict
-        #save rwd_stds and rwd_means and sclaer for test usage
+        #save rwd_stds and rwd_means and scaler for test usage
         else:
             
-            offline_buffer['actions'] =  (offline_buffer['actions']  - self.rwd_means[12])/self.rwd_stds[[12]]
+            offline_buffer['actions'] =  self.normalize(offline_buffer['actions'], idx = 12)
             offline_buffer['rewards'] = self.normalize_reward(offline_buffer['rewards'])
-
+            
             return offline_buffer
         
     
     def normalize_reward(self, rewards):
-        if self.scaler:
-            rewards = self.scaler.transform(rewards)
+        if self.scaler is not None:
+            normalized_rewards = self.scaler.transform(np.array(rewards).reshape(-1,1))
         else:
             scaler = MinMaxScaler()
-            rewards = rewards.reshape(-1, 1)
+            rewards = np.array(rewards).reshape(-1,1)
             scaler.fit(rewards)
             normalized_rewards = scaler.transform(rewards)
             self.scaler = scaler
@@ -143,6 +160,9 @@ class AbiomedEnv(gym.Env):
     
     def unnormalize(self, data, idx):
          return data  * self.rwd_stds[idx] +  self.rwd_means[idx]
+    
+    def normalize(self, data, idx):
+        return (data - self.rwd_means[idx]) / self.rwd_stds[idx]
 
     def step(self, action):
         """Run one timestep of the environment's dynamics. When end of
