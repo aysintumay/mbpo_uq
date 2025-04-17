@@ -1,6 +1,1 @@
-*.pkl
-*.txt
-*.pth
-wandb/
-intermediate_data/
-saved_models/
+intermediate_data/*.pkl
