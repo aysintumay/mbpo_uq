@@ -13,6 +13,13 @@ The performance of model-based RL algorithm greatly depends on the implementatio
 
 # Usage
 
+# UAMBPO
+```
+# for Abiomed
+
+python uambpo.py --task 'Abiomed-v0' --device_id 1
+```
+
 ## Train
 
 ```
