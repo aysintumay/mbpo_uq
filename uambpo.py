@@ -77,7 +77,7 @@ def main(args):
 
         args.pretrained = False
         args.data_name = 'train'  
-        args.step_per_epoch = 1000 #1000  
+        args.eval_episodes = 1000 #1000  
         #train on offline dataset or replayed dataset
         norm_info, trainer = train(i, logger, run, model_logger, args, norm_info, offline_buffer_train if offline_buffer_train is not None else None, )
         
@@ -96,7 +96,7 @@ def main(args):
 
         # args.policy_path = os.path.join(log_path, f"policy_{args.task}.pth")
 
-        args.step_per_epoch = 49939
+        args.eval_episodes = 49939
         args.data_name = 'train'
 
         args.mode = 'offline'
@@ -114,7 +114,7 @@ def main(args):
 
         #get renewed test dataset of 20k
         args.data_name = 'test'
-        args.step_per_epoch = 28015
+        args.eval_episodes = 28015
         args.mode = 'online'
         args.pretrained = True
 
@@ -158,6 +158,8 @@ def main(args):
                 'std_length': std_length,
                 'mean_accuracy': mean_accuracy,
                 'std_accuracy': std_accuracy,
+                'mean_1_off_accuracy': mean_1_off_accuracy,
+                'std_1_off_accuracy': std_1_off_accuracy,
                 'iter': i
             })
             time_total = time.time() - start_time
@@ -223,8 +225,8 @@ def get_args():
 
     parser.add_argument('--num_samples', type=int, default=50)
 
-    parser.add_argument("--epoch", type=int, default=1) #1000 #change
-    parser.add_argument("--step-per-epoch", type=int, default=1) # will be equated to #of samples in train and test #change
+    parser.add_argument("--epoch", type=int, default=50) #1000 #change
+    parser.add_argument("--step-per-epoch", type=int, default=1000) # will be equated to #of samples in train and test #change
     parser.add_argument("--eval_episodes", type=int, default=10) # #change
     parser.add_argument("--batch-size", type=int, default=256)
     parser.add_argument("--terminal_counter", type=int, default=1) 
@@ -240,7 +242,7 @@ def get_args():
                         help='Specify the sequence dimension.')
     parser.add_argument('-bc', '--bc', type=int, metavar='<size>', default=64,
                         help='Specify the batch size.') 
-    parser.add_argument('-nepochs', '--nepochs', type=int, metavar='<epochs>', default=1, #change
+    parser.add_argument('-nepochs', '--nepochs', type=int, metavar='<epochs>', default=20, #change
                         help='Specify the number of epochs to train for.')
     parser.add_argument('-encoder_size', '--encs', type=int, metavar='<size>', default=2,
                 help='Set the number of encoder layers.') 

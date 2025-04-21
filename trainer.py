@@ -171,7 +171,8 @@ class Trainer:
             model_save_dir = util.logger_model.log_path
             if not os.path.exists(model_save_dir):
                 os.makedirs(model_save_dir)
-            torch.save(self.algo.policy.to('cpu').state_dict(), os.path.join(model_save_dir, f"policy_{self.env_name}.pth"))        #plot q_values for each epoch
+            torch.save(self.algo.policy.to('cpu').state_dict(), os.path.join(model_save_dir, f"policy_{self.env_name}.pth")) #plot q_values for each epoch
+            self.algo.policy.to(util.device)        
         if self.run_id != 0: 
             plot_q_value(np.array(q1_l).reshape(-1,1), 'Q1')
             plot_q_value(np.array(q2_l).reshape(-1,1), 'Q2')

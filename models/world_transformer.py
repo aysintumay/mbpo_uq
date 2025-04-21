@@ -90,7 +90,7 @@ class WorldTransformer:
         
         if not os.path.exists(self.model_save_dir):
             os.makedirs(self.model_save_dir)
-        torch.save(self.model.to('cpu').state_dict(),  os.path.join(self.model_save_dir, f"checkpoint_epoch_{self.args.nepochs}.pth"))
+        torch.save(self.model.to('cpu').state_dict(),  os.path.join('/data/models/world_model', f"checkpoint_epoch_{self.args.task}_{self.nepochs}.pth"))
         self.logger.print("World model total time: {:.3f}s".format(time.time() - start_time))
         return self.model
 
@@ -129,7 +129,7 @@ class WorldTransformer:
         # Load the model state dict
    
         # self.model.load_state_dict(torch.load(os.path.join(self.logger.writer.get_logdir(), f"checkpoint_epoch_{self.args.epoch}.pth")))
-        self.model.load_state_dict(torch.load(os.path.join(self.model_save_dir, f"checkpoint_epoch_{self.args.nepochs}.pth")))
+        self.model.load_state_dict(torch.load(os.path.join('/data/models/world_model', f"checkpoint_epoch_{self.args.task}_{self.nepochs}.pth")))
         return self.model.to(self.device)
     
     def predict(self, obs_loader):
