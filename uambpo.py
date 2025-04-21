@@ -96,7 +96,7 @@ def main(args):
 
         # args.policy_path = os.path.join(log_path, f"policy_{args.task}.pth")
 
-        args.eval_episodes = 2
+        args.eval_episodes = 49939
         args.data_name = 'train'
 
         args.mode = 'offline'
@@ -114,7 +114,7 @@ def main(args):
 
         #get renewed test dataset of 20k
         args.data_name = 'test'
-        args.eval_episodes = 2
+        args.eval_episodes = 28015
         args.mode = 'online'
         args.pretrained = True
 
@@ -194,7 +194,7 @@ def get_args():
     parser.add_argument(
                     "--devid", 
                     type=int,
-                    default=6,
+                    default=7,
                     help="Which GPU device index to use"
                 )
     parser.add_argument("--iter", type=int, default=3)
