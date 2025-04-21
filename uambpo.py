@@ -89,14 +89,14 @@ def main(args):
         os.makedirs(model_path, exist_ok=True)
         #save policy
         torch.save(policy.state_dict(), os.path.join(model_path, f"policy_{args.task}_{i}.pth"))
-        policy.to(util.device)
+        # policy.to(util.device)
         #save transition model
         trainer.algo.save_dynamics_model(f"dynamics_model_{i}")
         
 
         # args.policy_path = os.path.join(log_path, f"policy_{args.task}.pth")
 
-        args.eval_episodes = 49939
+        args.eval_episodes = 2
         args.data_name = 'train'
 
         args.mode = 'offline'
@@ -109,12 +109,12 @@ def main(args):
         #save the dataset
         if not os.path.exists('/data/abiomed_tmp/intermediate_data_uambpo'):
             os.makedirs('/data/abiomed_tmp/intermediate_data_uambpo')
-        with open(os.path.join('data/abiomed_tmp/intermediate_data_uambpo',f'dataset_train_{i+1}.pkl'), 'wb') as f:
+        with open(os.path.join('/data/abiomed_tmp/intermediate_data_uambpo',f'dataset_train_{i+1}.pkl'), 'wb') as f:
             pickle.dump(dataset_train, f)
 
         #get renewed test dataset of 20k
         args.data_name = 'test'
-        args.eval_episodes = 28015
+        args.eval_episodes = 2
         args.mode = 'online'
         args.pretrained = True
 

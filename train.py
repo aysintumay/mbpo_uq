@@ -242,7 +242,7 @@ def train(i, logger, run, model_logger, args, scaler_info, offline_buffer = None
     )
     #load world model
 
-    dynamics_model.load_model(f'dynamics_model') 
+    # dynamics_model.load_model(f'dynamics_model') 
 
     
     # create trainer
@@ -264,7 +264,7 @@ def train(i, logger, run, model_logger, args, scaler_info, offline_buffer = None
     )
 
     # pretrain dynamics model on the whole dataset
-    # trainer.train_dynamics()
+    trainer.train_dynamics()
     #  
 
     

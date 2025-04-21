@@ -217,7 +217,7 @@ if __name__ == '__main__':
         '--output-path', type=str, help='figure save path', default="results"
     )
     parser.add_argument(
-        '--data-path', type=str, help='figure save path', default="intermediate_data"
+        '--data-path', type=str, help='figure save path', default="/data/abiomed_tmp/intermediate_data_uambpo"
     )
 
 
