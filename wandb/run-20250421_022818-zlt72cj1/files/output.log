@@ -1,0 +1,26 @@
+setting device: cuda:5
+====================Iteration 1====================
+Traceback (most recent call last):
+  File "uambpo.py", line 263, in <module>
+    main(args=get_args())
+  File "uambpo.py", line 81, in main
+    norm_info, trainer = train(i, logger, run, model_logger, args, norm_info, offline_buffer_train if offline_buffer_train is not None else None, )
+  File "/home/ubuntu/mbpo_uq/train.py", line 109, in train
+    env = gym.make(args.task, **kwargs)
+  File "/home/ubuntu/miniconda3/envs/mopo/lib/python3.8/site-packages/gym/envs/registration.py", line 676, in make
+    return registry.make(id, **kwargs)
+  File "/home/ubuntu/miniconda3/envs/mopo/lib/python3.8/site-packages/gym/envs/registration.py", line 520, in make
+    return spec.make(**kwargs)
+  File "/home/ubuntu/miniconda3/envs/mopo/lib/python3.8/site-packages/gym/envs/registration.py", line 140, in make
+    env = cls(**_kwargs)
+  File "/home/ubuntu/mbpo_uq/abiomed_env.py", line 33, in __init__
+    self.world_model = WorldTransformer(args = self.args, logger = self.logger, pretrained = self.pretrained)
+  File "/home/ubuntu/mbpo_uq/models/world_transformer.py", line 53, in __init__
+    self.train_loader = self.read_data('train')
+  File "/home/ubuntu/mbpo_uq/models/world_transformer.py", line 103, in read_data
+    self.rwd_std = dta.std(axis=(0, 1))
+  File "/home/ubuntu/miniconda3/envs/mopo/lib/python3.8/site-packages/numpy/core/_methods.py", line 262, in _std
+    ret = _var(a, axis=axis, dtype=dtype, out=out, ddof=ddof,
+  File "/home/ubuntu/miniconda3/envs/mopo/lib/python3.8/site-packages/numpy/core/_methods.py", line 230, in _var
+    x = asanyarray(arr - arrmean)
+KeyboardInterrupt

@@ -1,0 +1,46 @@
+World model total time: 39.391s
+Start training dynamics
+loss/model_eval_mse_loss: 0.136031
+loss/model_eval_mse_loss: 0.133803
+loss/model_eval_mse_loss: 0.131363
+loss/model_eval_mse_loss: 0.128684
+loss/model_eval_mse_loss: 0.127195
+loss/model_eval_mse_loss: 0.128576
+loss/model_eval_mse_loss: 0.125312
+loss/model_eval_mse_loss: 0.124459
+loss/model_eval_mse_loss: 0.124619
+loss/model_eval_mse_loss: 0.123109
+loss/model_eval_mse_loss: 0.122326
+loss/model_eval_mse_loss: 0.123570
+loss/model_eval_mse_loss: 0.120340
+loss/model_eval_mse_loss: 0.124447
+loss/model_eval_mse_loss: 0.128201
+loss/model_eval_mse_loss: 0.120407
+loss/model_eval_mse_loss: 0.119489
+loss/model_eval_mse_loss: 0.120715
+loss/model_eval_mse_loss: 0.119661
+loss/model_eval_mse_loss: 0.119477
+loss/model_eval_mse_loss: 0.119825
+loss/model_eval_mse_loss: 0.119366
+total time: 228.157s
+total time: 70.028s
+EVAL TIME: 1.743s
+EVAL TIME: 0.749s
+EVAL TIME: 0.764s
+EVAL TIME: 0.751s
+EVAL TIME: 0.750s
+EVAL TIME: 0.742s
+EVAL TIME: 0.756s
+EVAL TIME: 0.739s
+EVAL TIME: 0.747s
+EVAL TIME: 0.772s
+EVAL TIME: 0.775s
+EVAL TIME: 0.755s
+EVAL TIME: 0.767s
+EVAL TIME: 0.749s
+EVAL TIME: 0.789s
+EVAL TIME: 0.753s
+EVAL TIME: 0.750s
+EVAL TIME: 0.751s
+EVAL TIME: 1.051s
+EVAL TIME: 0.777s

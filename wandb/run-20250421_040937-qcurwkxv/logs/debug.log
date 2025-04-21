@@ -1,0 +1,7 @@
+2025-04-21 04:09:37,986 INFO    MainThread:614474 [wandb_init.py:setup_run_log_directory():647] Logging user logs to /home/ubuntu/mbpo_uq/wandb/run-20250421_040937-qcurwkxv/logs/debug.log
+2025-04-21 04:09:37,986 INFO    MainThread:614474 [wandb_init.py:setup_run_log_directory():648] Logging internal logs to /home/ubuntu/mbpo_uq/wandb/run-20250421_040937-qcurwkxv/logs/debug-internal.log
+2025-04-21 04:09:37,986 INFO    MainThread:614474 [wandb_init.py:init():761] calling init triggers
+2025-04-21 04:09:37,987 INFO    MainThread:614474 [wandb_init.py:init():766] wandb.init called with sweep_config: {}
+config: {'_wandb': {}}
+2025-04-21 04:09:37,987 INFO    MainThread:614474 [wandb_init.py:init():776] wandb.init() called while a run is active
+2025-04-21 04:17:04,394 INFO    MsgRouterThr:614474 [mailbox.py:close():129] Closing mailbox, abandoning 1 handles.

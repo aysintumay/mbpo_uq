@@ -1,0 +1,34 @@
+setting device: cuda:0
+====================Iteration 1====================
+plshape is  (49939, 90)
+number of epochs 2
+100%|████████████████████████████████████████████████████████████████████████████████████| 781/781 [00:14<00:00, 54.01it/s]
+Epoch 1, Loss: 0.1380
+100%|████████████████████████████████████████████████████████████████████████████████████| 781/781 [00:14<00:00, 55.35it/s]
+Epoch 2, Loss: 0.1285
+[1;32m [info][0m: World model total time: 29.249s
+trained model
+100%|█████████████████████████████████████████████████████████████████████████████| 49939/49939 [00:03<00:00, 15604.43it/s]
+100%|█████████████████████████████████████████████████████████████████████████████| 49939/49939 [00:03<00:00, 14803.33it/s]
+Policy to be trained!
+[1;32m [info][0m: Start training dynamics
+Traceback (most recent call last):
+  File "uambpo.py", line 263, in <module>
+    main(args=get_args())
+  File "uambpo.py", line 81, in main
+    norm_info, trainer = train(i, logger, run, model_logger, args, norm_info, offline_buffer_train if offline_buffer_train is not None else None, )
+  File "/home/ubuntu/mbpo_uq/train.py", line 264, in train
+    trainer.train_dynamics()
+  File "/home/ubuntu/mbpo_uq/trainer.py", line 98, in train_dynamics
+    self.algo.learn_dynamics()
+  File "/home/ubuntu/mbpo_uq/algo/mopo.py", line 98, in learn_dynamics
+    eval_mse_losses, _ = self.dynamics_model.eval_data(eval_data, update_elite_models=False)
+  File "/home/ubuntu/miniconda3/envs/mopo/lib/python3.8/site-packages/torch/utils/_contextlib.py", line 116, in decorate_context
+    return func(*args, **kwargs)
+  File "/home/ubuntu/mbpo_uq/models/transition_model.py", line 53, in eval_data
+    predictions = functional.minibatch_inference(args=[model_input], rollout_fn=self.model.predict,
+  File "/home/ubuntu/mbpo_uq/common/functional.py", line 36, in minibatch_inference
+    outputs = rollout_fn(*input_batch)
+  File "/home/ubuntu/mbpo_uq/models/ensemble_dynamics.py", line 134, in predict
+    predictions = torch.stack(model_outputs)
+torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 290.00 MiB. GPU 0 has a total capacity of 79.25 GiB of which 94.44 MiB is free. Process 4080583 has 1.98 GiB memory in use. Process 726970 has 75.77 GiB memory in use. Process 1436503 has 416.00 MiB memory in use. Process 1471227 has 978.00 MiB memory in use. Of the allocated memory 396.71 MiB is allocated by PyTorch, and 73.29 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)

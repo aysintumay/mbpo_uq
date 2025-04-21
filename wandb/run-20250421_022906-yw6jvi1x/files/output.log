@@ -1,0 +1,33 @@
+setting device: cuda:5
+====================Iteration 1====================
+plshape is  (49939, 90)
+number of epochs 2
+100%|████████████████████████████████████████████████████████████████████████████████████| 781/781 [00:09<00:00, 85.41it/s]
+Epoch 1, Loss: 0.1373
+100%|████████████████████████████████████████████████████████████████████████████████████| 781/781 [00:08<00:00, 87.86it/s]
+Epoch 2, Loss: 0.1255
+[1;32m [info][0m: World model total time: 18.684s
+trained model
+100%|█████████████████████████████████████████████████████████████████████████████| 49939/49939 [00:04<00:00, 11747.55it/s]
+Traceback (most recent call last):
+  File "uambpo.py", line 263, in <module>
+    main(args=get_args())
+  File "uambpo.py", line 81, in main
+    norm_info, trainer = train(i, logger, run, model_logger, args, norm_info, offline_buffer_train if offline_buffer_train is not None else None, )
+  File "/home/ubuntu/mbpo_uq/train.py", line 109, in train
+    env = gym.make(args.task, **kwargs)
+  File "/home/ubuntu/miniconda3/envs/mopo/lib/python3.8/site-packages/gym/envs/registration.py", line 676, in make
+    return registry.make(id, **kwargs)
+  File "/home/ubuntu/miniconda3/envs/mopo/lib/python3.8/site-packages/gym/envs/registration.py", line 520, in make
+    return spec.make(**kwargs)
+  File "/home/ubuntu/miniconda3/envs/mopo/lib/python3.8/site-packages/gym/envs/registration.py", line 140, in make
+    env = cls(**_kwargs)
+  File "/home/ubuntu/mbpo_uq/abiomed_env.py", line 35, in __init__
+    self.data = self.qlearning_dataset()
+  File "/home/ubuntu/mbpo_uq/abiomed_env.py", line 280, in qlearning_dataset
+    dataset = self.get_dataset(**kwargs)
+  File "/home/ubuntu/mbpo_uq/abiomed_env.py", line 399, in get_dataset
+    return self.load_data()
+  File "/home/ubuntu/mbpo_uq/abiomed_env.py", line 101, in load_data
+    with open(os.path.join('/data/abiomed_tmp/intermediate_data',f'dataset_train_0.pkl'), 'wb') as f:
+FileNotFoundError: [Errno 2] No such file or directory: '/data/abiomed_tmp/intermediate_data/dataset_train_0.pkl'

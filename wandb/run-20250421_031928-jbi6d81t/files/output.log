@@ -1,0 +1,66 @@
+setting device: cuda:7
+====================Iteration 1====================
+plshape is  (49939, 90)
+number of epochs 2
+100%|████████████████████████████████████████████████████████████████████████████████████| 781/781 [00:18<00:00, 41.26it/s]
+Epoch 1, Loss: 0.1389
+100%|████████████████████████████████████████████████████████████████████████████████████| 781/781 [00:18<00:00, 41.77it/s]
+Epoch 2, Loss: 0.1257
+[1;32m [info][0m: World model total time: 38.271s
+trained model
+100%|█████████████████████████████████████████████████████████████████████████████| 49939/49939 [00:03<00:00, 14128.36it/s]
+100%|█████████████████████████████████████████████████████████████████████████████| 49939/49939 [00:03<00:00, 15774.51it/s]
+Policy to be trained!
+[1;32m [info][0m: Start training dynamics
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.136029
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.133545
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.132678
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.128471
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.126851
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.127283
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.125749
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.123633
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.124672
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.120895
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.120850
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.122584
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.120482
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.120515
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.120248
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.120646
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.119930
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.119795
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.119570
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.118946
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.119639
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.118543
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.118422
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.118858
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.121017
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.119506
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.120120
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.119719
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.118739
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.120251
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.122554
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.119988
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.120329
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.122119
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.120168
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.126002
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.127779
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.124434
+[1;32m [info][0m: total time: 353.582s
+Epoch #1/1:   0%|                                                                                 | 0/1000 [00:02<?, ?it/s]
+Traceback (most recent call last):
+  File "uambpo.py", line 263, in <module>
+    main(args=get_args())
+  File "uambpo.py", line 81, in main
+    norm_info, trainer = train(i, logger, run, model_logger, args, norm_info, offline_buffer_train if offline_buffer_train is not None else None, )
+  File "/home/ubuntu/mbpo_uq/train.py", line 269, in train
+    trainer.train_policy()
+  File "/home/ubuntu/mbpo_uq/trainer.py", line 118, in train_policy
+    self.algo.rollout_transitions()
+  File "/home/ubuntu/mbpo_uq/algo/mopo.py", line 65, in rollout_transitions
+    print(self.self._rollout_batch_size)
+AttributeError: 'MOPO' object has no attribute 'self'

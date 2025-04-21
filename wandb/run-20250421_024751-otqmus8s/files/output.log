@@ -1,0 +1,21 @@
+setting device: cuda:5
+====================Iteration 1====================
+plshape is  (49939, 90)
+number of epochs 2
+100%|████████████████████████████████████████████████████████████████████████████████████| 781/781 [00:11<00:00, 68.41it/s]
+Epoch 1, Loss: 0.1386
+100%|████████████████████████████████████████████████████████████████████████████████████| 781/781 [00:11<00:00, 70.39it/s]
+Epoch 2, Loss: 0.1243
+[1;32m [info][0m: World model total time: 23.135s
+trained model
+100%|█████████████████████████████████████████████████████████████████████████████| 49939/49939 [00:03<00:00, 13165.55it/s]
+100%|█████████████████████████████████████████████████████████████████████████████| 49939/49939 [00:03<00:00, 14820.89it/s]
+Policy to be trained!
+Traceback (most recent call last):
+  File "uambpo.py", line 263, in <module>
+    main(args=get_args())
+  File "uambpo.py", line 81, in main
+    norm_info, trainer = train(i, logger, run, model_logger, args, norm_info, offline_buffer_train if offline_buffer_train is not None else None, )
+  File "/home/ubuntu/mbpo_uq/train.py", line 255, in train
+    run_id = run.id,
+AttributeError: 'int' object has no attribute 'id'

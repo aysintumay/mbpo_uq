@@ -1,0 +1,91 @@
+setting device: cuda:6
+====================Iteration 1====================
+plshape is  (49939, 90)
+number of epochs 2
+100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 781/781 [00:12<00:00, 61.40it/s]
+Epoch 1, Loss: 0.1380
+100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 781/781 [00:21<00:00, 35.98it/s]
+Epoch 2, Loss: 0.1285
+[1;32m [info][0m: World model total time: 35.753s
+trained model
+100%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 49939/49939 [00:03<00:00, 12537.72it/s]
+100%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 49939/49939 [00:03<00:00, 13745.96it/s]
+Policy to be trained!
+[1;32m [info][0m: Start training dynamics
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.094263
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.092972
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.092294
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.090736
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.089953
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.088417
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.087286
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.087903
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.087937
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.087620
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.088020
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.086613
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.086483
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.087336
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.086432
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.085769
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.085679
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.086572
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.084538
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.084771
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.086892
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.083394
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.083138
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.082968
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.082581
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.082481
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.081610
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.081636
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.080821
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.080089
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.079983
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.079120
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.078627
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.078739
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.077500
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.077364
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.076095
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.075760
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.074282
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.072640
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.072219
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.071135
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.071526
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.072017
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.070605
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.072952
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.071255
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.068897
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.070296
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.067960
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.068189
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.067621
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.067388
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.067276
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.067754
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.071297
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.069377
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.071283
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.070081
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.073897
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.074589
+[1;32m [info][0m: total time: 671.583s
+Epoch #1/50:   0%|                                                                                                                                                                        | 0/1000 [14:28<?, ?it/s]
+Traceback (most recent call last):
+  File "uambpo.py", line 254, in <module>
+    main(args=get_args())
+  File "uambpo.py", line 81, in main
+    norm_info, trainer = train(i, logger, run, model_logger, args, norm_info, offline_buffer_train if offline_buffer_train is not None else None, )
+  File "/home/ubuntu/mbpo_uq/train.py", line 264, in train
+    trainer.train_policy()
+  File "/home/ubuntu/mbpo_uq/trainer.py", line 117, in train_policy
+    self.algo.rollout_transitions()
+  File "/home/ubuntu/mbpo_uq/algo/mopo.py", line 65, in rollout_transitions
+    self.model_buffer.add_batch(observations, next_observations, actions, rewards, terminals)
+  File "/home/ubuntu/mbpo_uq/common/buffer.py", line 81, in add_batch
+    self.observations[begin:end] = np.array(obs).copy()
+KeyboardInterrupt

@@ -1,0 +1,4 @@
+World model total time: 20.917s
+total time: 207.125s
+World model total time: 20.663s
+total time: 191.175s

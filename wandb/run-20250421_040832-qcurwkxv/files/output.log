@@ -1,0 +1,76 @@
+setting device: cuda:7
+====================Iteration 1====================
+plshape is  (49939, 90)
+number of epochs 2
+100%|████████████████████████████████████████████████████████████████████████████████████| 781/781 [00:19<00:00, 40.97it/s]
+Epoch 1, Loss: 0.1374
+100%|████████████████████████████████████████████████████████████████████████████████████| 781/781 [00:19<00:00, 40.86it/s]
+Epoch 2, Loss: 0.1245
+[1;32m [info][0m: World model total time: 38.817s
+trained model
+100%|█████████████████████████████████████████████████████████████████████████████| 49939/49939 [00:03<00:00, 12699.71it/s]
+100%|█████████████████████████████████████████████████████████████████████████████| 49939/49939 [00:03<00:00, 14723.97it/s]
+Policy to be trained!
+[1;32m [info][0m: Start training dynamics
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.136029
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.133545
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.132678
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.128471
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.126851
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.127283
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.125749
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.123633
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.124672
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.120895
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.120850
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.122584
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.120482
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.120515
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.120248
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.120646
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.119930
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.119795
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.119570
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.118946
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.119639
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.118543
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.118422
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.118858
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.121017
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.119506
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.120120
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.119719
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.118739
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.120251
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.122554
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.119988
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.120329
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.122119
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.120168
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.126002
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.127779
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.124434
+[1;32m [info][0m: total time: 374.062s
+Epoch #1/1: 100%|█| 1000/1000 [01:03<00:00, 15.72it/s, alpha=0.741, entropy=1.31, loss/actor=-10.3, loss/alpha=-0.692, loss
+5000
+rollout pred time -2.86041522026062
+5000
+rollout pred time -2.763343572616577
+5000
+rollout pred time -2.843782663345337
+5000
+rollout pred time -2.3074231147766113
+5000
+rollout pred time -2.6592493057250977
+[1;32m [info][0m: total time: 71.787s
+pretrained True
+started testing
+log path  log/Abiomed-v0/mbpo_uq/seed_1_0421_040833-Abiomed_v0_mbpo_uq
+Traceback (most recent call last):
+  File "uambpo.py", line 263, in <module>
+    main(args=get_args())
+  File "uambpo.py", line 107, in main
+    dataset_train, _ = test(i, args, model_logger, norm_info, policy, trainer, offline_buffer_train if offline_buffer_train is not None else None, log_path)
+  File "/home/ubuntu/mbpo_uq/test.py", line 132, in test
+    Devid = util.device_id if args.device == 'cuda' else -1
+AttributeError: module 'common.util' has no attribute 'device_id'

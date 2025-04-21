@@ -20,6 +20,7 @@ from common.buffer import ReplayBuffer
 from common.logger import Logger
 from trainer import Trainer,plot_accuracy
 from common.util import set_device_and_logger
+from common import util
 # from trainer import _evaluate, evaluate
 
 
@@ -128,7 +129,7 @@ def test(i, args, model_logger, norm_info, sac_policy, trainer, offline_buffer=N
     writer.add_text("args", str(args))
     logger = Logger(writer=writer,log_path=log_path)
 
-    Devid = args.device_id if args.device == 'cuda' else -1
+    Devid = args.devid if args.device == 'cuda' else -1
     set_device_and_logger(Devid,logger, model_logger)
 
     # create env and dataset
@@ -148,9 +149,9 @@ def test(i, args, model_logger, norm_info, sac_policy, trainer, offline_buffer=N
     else:
         env = gym.make(args.task)
 
-    dataset = d4rl.qlearning_dataset(env)
-    args.obs_shape = env.observation_space.shape
-    args.action_dim = np.prod(env.action_space.shape)
+    # dataset = d4rl.qlearning_dataset(env)
+    # args.obs_shape = env.observation_space.shape
+    # args.action_dim = np.prod(env.action_space.shape)
 
     
     env.seed(args.seed)

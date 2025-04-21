@@ -1,0 +1,2 @@
+World model total time: 29.249s
+Start training dynamics

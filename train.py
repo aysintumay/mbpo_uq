@@ -4,7 +4,7 @@ import pickle
 import os
 import random
 import importlib
-import wandb 
+# import wandb 
 
 import gym
 import d4rl
@@ -21,72 +21,74 @@ from common.buffer import ReplayBuffer
 from common.logger import Logger
 from trainer import Trainer
 from common.util import set_device_and_logger
+from common import util
+from abiomed_env import AbiomedEnv
 
 
-def get_args():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--algo-name", type=str, default="mopo")
-    parser.add_argument("--pretrained", type=bool, default=True)
-    parser.add_argument("--replay", type=bool, default=False)
-    # parser.add_argument("--task", type=str, default="walker2d-medium-replay-v2")
+# def get_args():
+#     parser = argparse.ArgumentParser()
+#     parser.add_argument("--algo-name", type=str, default="mopo")
+#     parser.add_argument("--pretrained", type=bool, default=True)
+#     parser.add_argument("--replay", type=bool, default=False)
+#     # parser.add_argument("--task", type=str, default="walker2d-medium-replay-v2")
     
-    parser.add_argument("--task", type=str, default="Abiomed-v0")
-    parser.add_argument("--seed", type=int, default=1)
-    parser.add_argument("--actor-lr", type=float, default=3e-4)
-    parser.add_argument("--critic-lr", type=float, default=3e-4)
-    parser.add_argument("--gamma", type=float, default=0.99)
-    parser.add_argument("--tau", type=float, default=0.005)
-    parser.add_argument("--alpha", type=float, default=0.2)
-    parser.add_argument('--auto-alpha', default=True)
-    parser.add_argument('--target-entropy', type=int, default=-3) #-action_dim
-    parser.add_argument('--alpha-lr', type=float, default=3e-4)
+#     parser.add_argument("--task", type=str, default="Abiomed-v0")
+#     parser.add_argument("--seed", type=int, default=1)
+#     parser.add_argument("--actor-lr", type=float, default=3e-4)
+#     parser.add_argument("--critic-lr", type=float, default=3e-4)
+#     parser.add_argument("--gamma", type=float, default=0.99)
+#     parser.add_argument("--tau", type=float, default=0.005)
+#     parser.add_argument("--alpha", type=float, default=0.2)
+#     parser.add_argument('--auto-alpha', default=True)
+#     parser.add_argument('--target-entropy', type=int, default=-3) #-action_dim
+#     parser.add_argument('--alpha-lr', type=float, default=3e-4)
 
-    # dynamics model's arguments
-    parser.add_argument("--dynamics-lr", type=float, default=0.001)
-    parser.add_argument("--n-ensembles", type=int, default=7)
-    parser.add_argument("--n-elites", type=int, default=5)
-    parser.add_argument("--reward-penalty-coef", type=float, default=1.0) #1e=6
-    parser.add_argument("--rollout-length", type=int, default=5) #1 
-    parser.add_argument("--rollout-batch-size", type=int, default=50000) #50000
-    parser.add_argument("--rollout-freq", type=int, default=1000)
-    parser.add_argument("--model-retain-epochs", type=int, default=5)
-    parser.add_argument("--real-ratio", type=float, default=0.05)
-    parser.add_argument("--dynamics-model-dir", type=str, default=None)
+#     # dynamics model's arguments
+#     parser.add_argument("--dynamics-lr", type=float, default=0.001)
+#     parser.add_argument("--n-ensembles", type=int, default=7)
+#     parser.add_argument("--n-elites", type=int, default=5)
+#     parser.add_argument("--reward-penalty-coef", type=float, default=1.0) #1e=6
+#     parser.add_argument("--rollout-length", type=int, default=5) #1 
+#     parser.add_argument("--rollout-batch-size", type=int, default=50000) #50000
+#     parser.add_argument("--rollout-freq", type=int, default=1000)
+#     parser.add_argument("--model-retain-epochs", type=int, default=5)
+#     parser.add_argument("--real-ratio", type=float, default=0.05)
+#     parser.add_argument("--dynamics-model-dir", type=str, default=None)
 
-    parser.add_argument("--epoch", type=int, default=1000) #1000
-    parser.add_argument("--step-per-epoch", type=int, default=1000)
-    parser.add_argument("--eval_episodes", type=int, default=10)
-    parser.add_argument("--batch-size", type=int, default=256)
-    parser.add_argument("--logdir", type=str, default="log")
-    parser.add_argument("--log-freq", type=int, default=1000)
-    parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu")
+#     parser.add_argument("--epoch", type=int, default=1000) #1000
+#     parser.add_argument("--step-per-epoch", type=int, default=1000)
+#     parser.add_argument("--eval_episodes", type=int, default=10)
+#     parser.add_argument("--batch-size", type=int, default=256)
+#     parser.add_argument("--logdir", type=str, default="log")
+#     parser.add_argument("--log-freq", type=int, default=1000)
+#     parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu")
 
-    #world transformer arguments
-    parser.add_argument('-seq_dim', '--seq_dim', type=int, metavar='<dim>', default=12,
-                        help='Specify the sequence dimension.')
-    parser.add_argument('-output_dim', '--output_dim', type=int, metavar='<dim>', default=11*12,
-                        help='Specify the sequence dimension.')
-    parser.add_argument('-bc', '--bc', type=int, metavar='<size>', default=64,
-                        help='Specify the batch size.')
-    parser.add_argument('-nepochs', '--nepochs', type=int, metavar='<epochs>', default=20,
-                        help='Specify the number of epochs to train for.')
-    parser.add_argument('-encoder_size', '--encs', type=int, metavar='<size>', default=2,
-                help='Set the number of encoder layers.') 
-    parser.add_argument('-lr', '--lr', type=float, metavar='<size>', default=0.001,
-                        help='Specify the learning rate.')
-    parser.add_argument('-encoder_dropout', '--encoder_dropout', type=float, metavar='<size>', default=0.1,
-                help='Set the tunable dropout.')
-    parser.add_argument('-decoder_dropout', '--decoder_dropout', type=float, metavar='<size>', default=0,
-                help='Set the tunable dropout.')
-    parser.add_argument('-dim_model', '--dim_model', type=int, metavar='<size>', default=256,
-                help='Set the number of encoder layers.')
-    parser.add_argument('-path', '--path', type=str, metavar='<cohort>', 
-                        default='/data/abiomed_tmp/processed',
-                        help='Specify the path to read data.')
-    parser.add_argument('-data_name', '--data_name', type=str, metavar='<size>', default='train',
-                help='which data to work on.')
+#     #world transformer arguments
+#     parser.add_argument('-seq_dim', '--seq_dim', type=int, metavar='<dim>', default=12,
+#                         help='Specify the sequence dimension.')
+#     parser.add_argument('-output_dim', '--output_dim', type=int, metavar='<dim>', default=11*12,
+#                         help='Specify the sequence dimension.')
+#     parser.add_argument('-bc', '--bc', type=int, metavar='<size>', default=64,
+#                         help='Specify the batch size.')
+#     parser.add_argument('-nepochs', '--nepochs', type=int, metavar='<epochs>', default=20,
+#                         help='Specify the number of epochs to train for.')
+#     parser.add_argument('-encoder_size', '--encs', type=int, metavar='<size>', default=2,
+#                 help='Set the number of encoder layers.') 
+#     parser.add_argument('-lr', '--lr', type=float, metavar='<size>', default=0.001,
+#                         help='Specify the learning rate.')
+#     parser.add_argument('-encoder_dropout', '--encoder_dropout', type=float, metavar='<size>', default=0.1,
+#                 help='Set the tunable dropout.')
+#     parser.add_argument('-decoder_dropout', '--decoder_dropout', type=float, metavar='<size>', default=0,
+#                 help='Set the tunable dropout.')
+#     parser.add_argument('-dim_model', '--dim_model', type=int, metavar='<size>', default=256,
+#                 help='Set the number of encoder layers.')
+#     parser.add_argument('-path', '--path', type=str, metavar='<cohort>', 
+#                         default='/data/abiomed_tmp/processed',
+#                         help='Specify the path to read data.')
+#     parser.add_argument('-data_name', '--data_name', type=str, metavar='<size>', default='train',
+#                 help='which data to work on.')
 
-    return parser.parse_args()
+#     return parser.parse_args()
 
 
 def train(i, logger, run, model_logger, args, scaler_info, offline_buffer = None, ):
@@ -105,13 +107,14 @@ def train(i, logger, run, model_logger, args, scaler_info, offline_buffer = None
         if offline_buffer is not None:
             kwargs["offline_buffer"] = offline_buffer
         env = gym.make(args.task, **kwargs)
+        dataset = env.qlearning_dataset()
         #save trained world model
         trained_w_m = env.world_model.trained_model
         torch.save(trained_w_m, os.path.join(model_logger.log_path, f'world_model_{i}.pth'))
     else:
         env = gym.make(args.task)
 
-    dataset = d4rl.qlearning_dataset(env)
+        dataset = d4rl.qlearning_dataset(env)
     args.obs_shape = env.observation_space.shape
     args.action_dim = np.prod(env.action_space.shape)
 
@@ -142,9 +145,9 @@ def train(i, logger, run, model_logger, args, scaler_info, offline_buffer = None
         conditioned_sigma=True
     )
 
-    actor = ActorProb(actor_backbone, dist, args.device)
-    critic1 = Critic(critic1_backbone, args.device)
-    critic2 = Critic(critic2_backbone, args.device)
+    actor = ActorProb(actor_backbone, dist, util.device)
+    critic1 = Critic(critic1_backbone, util.device)
+    critic2 = Critic(critic2_backbone, util.device)
     actor_optim = torch.optim.Adam(actor.parameters(), lr=args.actor_lr)
     critic1_optim = torch.optim.Adam(critic1.parameters(), lr=args.critic_lr)
     critic2_optim = torch.optim.Adam(critic2.parameters(), lr=args.critic_lr)
@@ -155,7 +158,7 @@ def train(i, logger, run, model_logger, args, scaler_info, offline_buffer = None
         target_entropy = -np.prod(env.action_space.shape)
         args.target_entropy = target_entropy
 
-        log_alpha = torch.zeros(1, requires_grad=True, device=args.device)
+        log_alpha = torch.zeros(1, requires_grad=True, device=util.device)
         alpha_optim = torch.optim.Adam([log_alpha], lr=args.alpha_lr)
         args.alpha = (target_entropy, log_alpha, alpha_optim)
 
@@ -172,7 +175,7 @@ def train(i, logger, run, model_logger, args, scaler_info, offline_buffer = None
         tau=args.tau,
         gamma=args.gamma,
         alpha=args.alpha,
-        device=args.device
+        device=util.device
     )
 
     # create dynamics model
@@ -198,10 +201,12 @@ def train(i, logger, run, model_logger, args, scaler_info, offline_buffer = None
         
     else:
         # load offline buffer
-        print(f'Policy loaded from{model_logger.log_path}!')
-
+        
         policy_state_dict = torch.load(os.path.join(model_logger.log_path, f'policy_{args.task}.pth'))
         sac_policy.load_state_dict(policy_state_dict)
+        sac_policy.to(util.device)
+        print(f'Policy loaded from {model_logger.log_path}!')
+
       
 
     offline_buffer = ReplayBuffer(
@@ -229,6 +234,7 @@ def train(i, logger, run, model_logger, args, scaler_info, offline_buffer = None
         model_buffer=model_buffer,
         reward_penalty_coef=args.reward_penalty_coef,
         rollout_length=args.rollout_length,
+        rollout_batch_size=args.rollout_batch_size,
         batch_size=args.batch_size,
         real_ratio=args.real_ratio,
         logger=logger,
@@ -236,7 +242,7 @@ def train(i, logger, run, model_logger, args, scaler_info, offline_buffer = None
     )
     #load world model
 
-    # dynamics_model.load_model(f'dynamics_model') 
+    dynamics_model.load_model(f'dynamics_model') 
 
     
     # create trainer
@@ -252,11 +258,13 @@ def train(i, logger, run, model_logger, args, scaler_info, offline_buffer = None
         run_id = run.id,
         env_name = args.task,
         eval_episodes=args.eval_episodes,
+        terminal_counter= args.terminal_counter if args.task == "Abiomed-v0" else None,
+
         
     )
 
     # pretrain dynamics model on the whole dataset
-    trainer.train_dynamics()
+    # trainer.train_dynamics()
     #  
 
     

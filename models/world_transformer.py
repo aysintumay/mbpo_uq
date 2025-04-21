@@ -25,15 +25,26 @@ class WorldTransformer:
     def __init__(self, args, logger, pretrained = True):
         super(WorldTransformer, self).__init__()
 
-        self.path = args.path
-        self.logger = logger
+        self.path = getattr(args, 'path', '/data/abiomed_tmp/processed')
+        self.seq_dim = getattr(args, 'seq_dim', 12)
+        self.output_dim = getattr(args, 'output_dim', 11*12)
+        self.bc = getattr(args, 'bc', 64)
+        self.nepochs = getattr(args, 'nepochs', 20)
+        self.encs = getattr(args, 'encs', 2)
+        self.lr = getattr(args, 'lr', 0.001)
+        self.encoder_dropout = getattr(args, 'encoder_dropout', 0.1)
+        self.decoder_dropout = getattr(args, 'decoder_dropout', 0)
+        self.dim_model = getattr(args, 'dim_model', 256)
         self.args = args
-        self.device = args.device
 
-        self.model = TimeSeriesTransformer(input_dim=self.args.seq_dim, output_dim=self.args.output_dim, dim_model=self.args.dim_model,
-                                                num_encoder_layers = self.args.encs, pl_shape = 10,
-                                                encoder_dropout = self.args.encoder_dropout, 
-                                                decoder_dropout = self.args.decoder_dropout, 
+        
+        self.logger = logger
+        self.device = util.device
+
+        self.model = TimeSeriesTransformer(input_dim=self.seq_dim, output_dim=self.output_dim, dim_model=self.dim_model,
+                                                num_encoder_layers = self.encs, pl_shape = 10,
+                                                encoder_dropout = self.encoder_dropout, 
+                                                decoder_dropout = self.decoder_dropout, 
                                                 device=self.device)
         # self.train_loader = self.read_data('train')
         # self.test_loader = self.read_data(mode = 'test') 
@@ -63,11 +74,11 @@ class WorldTransformer:
             self.model.train()
             total_loss = 0
             for src, pl, tgt in tqdm(self.train_loader):
-                src = src.to(self.args.device)
-                pl = pl.to(self.args.device)
+                src = src.to(self.device)
+                pl = pl.to(self.device)
                 optimizer.zero_grad()
                 output = self.model(src, pl)
-                loss = criterion(output, tgt.to(self.args.device))
+                loss = criterion(output, tgt.to(self.device))
                 loss.backward()
                 optimizer.step()
                 total_loss += loss.item()
@@ -79,7 +90,7 @@ class WorldTransformer:
         
         if not os.path.exists(self.model_save_dir):
             os.makedirs(self.model_save_dir)
-        torch.save(self.model.state_dict(),  os.path.join(self.model_save_dir, f"checkpoint_epoch_{self.args.nepochs}.pth"))
+        torch.save(self.model.to('cpu').state_dict(),  os.path.join(self.model_save_dir, f"checkpoint_epoch_{self.args.nepochs}.pth"))
         self.logger.print("World model total time: {:.3f}s".format(time.time() - start_time))
         return self.model
 
@@ -90,7 +101,7 @@ class WorldTransformer:
         dta = dta[: ,:, :-1]
         self.rwd_mean = dta.mean(axis=(0, 1))
         self.rwd_std = dta.std(axis=(0, 1))
-        horizon = int(self.args.output_dim/12-1)
+        horizon = int(self.args.output_dim/self.seq_dim-1)
         if mode == 'test':
             dta = torch.load(os.path.join(self.path, 'pp_test_amicgs.pt')).numpy()
             dta = dta[: ,:, :-1]
@@ -131,11 +142,11 @@ class WorldTransformer:
                 outputs = []
                 input_i = src
                 for i in range(9):
-                    pl_i = pl[:, i*10:(i+1)*10].to(self.args.device)
+                    pl_i = pl[:, i*10:(i+1)*10].to(self.device)
                     output = self.trained_model(input_i, pl_i)
-                    output_reshaped = output.reshape([output.shape[0], 11, 12])[:, 1:,:] #only take new predictions, ignore first datapoint
+                    output_reshaped = output.reshape([output.shape[0], 11, self.seq_dim])[:, 1:,:] #only take new predictions, ignore first datapoint
                     outputs.append(output_reshaped)
-                    input_i = torch.concat([input_i[:,10:,:].to(self.args.device), output_reshaped], axis=1)
+                    input_i = torch.concat([input_i[:,10:,:].to(self.device), output_reshaped], axis=1)
                 #64x90x6
                 pred = np.array(torch.concat(outputs, axis=1).detach().cpu())
                 # all_outputs.append(pred.detach().cpu())

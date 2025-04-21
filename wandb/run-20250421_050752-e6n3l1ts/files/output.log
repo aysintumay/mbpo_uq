@@ -1,0 +1,79 @@
+setting device: cuda:7
+====================Iteration 1====================
+plshape is  (49939, 90)
+number of epochs 2
+100%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████| 781/781 [00:09<00:00, 80.59it/s]
+Epoch 1, Loss: 0.1379
+100%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████| 781/781 [00:17<00:00, 44.75it/s]
+Epoch 2, Loss: 0.1334
+[1;32m [info][0m: World model total time: 27.867s
+trained model
+100%|██████████████████████████████████████████████████████████████████████████████████████████████████████| 49939/49939 [00:03<00:00, 14423.96it/s]
+100%|██████████████████████████████████████████████████████████████████████████████████████████████████████| 49939/49939 [00:03<00:00, 15586.21it/s]
+Policy to be trained!
+[1;32m [info][0m: Start training dynamics
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.136031
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.133803
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.131363
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.128684
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.127195
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.128576
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.125312
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.124459
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.124619
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.123109
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.122326
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.123570
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.120340
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.124447
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.128201
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.120407
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.119489
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.120715
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.119661
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.119477
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.119825
+[1;32m [info][0m: loss/model_eval_mse_loss: 0.119366
+[1;32m [info][0m: total time: 226.015s
+Epoch #1/1: 100%|█| 1000/1000 [01:00<00:00, 16.62it/s, alpha=0.741, entropy=1.34, loss/actor=-10.5, loss/alpha=-0.701, loss/critic1=0.19, loss/criti
+5000
+rollout pred time -1.2988340854644775
+5000
+rollout pred time -1.2291452884674072
+5000
+rollout pred time -1.1739223003387451
+5000
+rollout pred time -1.1737327575683594
+5000
+rollout pred time -1.405491590499878
+[1;32m [info][0m: total time: 68.537s
+pretrained True
+started testing
+log path  log/Abiomed-v0/mbpo_uq/seed_1_0421_050753-Abiomed_v0_mbpo_uq
+setting device: cuda:7
+plshape is  (49939, 90)
+loaded model
+100%|██████████████████████████████████████████████████████████████████████████████████████████████████████| 49939/49939 [00:03<00:00, 14728.38it/s]
+  0%|                                                                                                                        | 0/10 [00:00<?, ?it/s]
+Traceback (most recent call last):
+  File "uambpo.py", line 263, in <module>
+    main(args=get_args())
+  File "uambpo.py", line 107, in main
+    dataset_train, _ = test(i, args, model_logger, norm_info, policy, trainer, offline_buffer_train if offline_buffer_train is not None else None, log_path)
+  File "/home/ubuntu/mbpo_uq/test.py", line 170, in test
+    test_dataset, eval_info = get_eval(sac_policy, env, logger, trainer, args)
+  File "/home/ubuntu/mbpo_uq/test.py", line 76, in get_eval
+    eval_info, dataset = trainer.evaluate()
+  File "/home/ubuntu/mbpo_uq/trainer.py", line 256, in evaluate
+    next_obs, reward, terminal, info = self.eval_env.step(action) #next state predictions
+  File "/home/ubuntu/miniconda3/envs/mopo/lib/python3.8/site-packages/gym/wrappers/time_limit.py", line 17, in step
+    observation, reward, done, info = self.env.step(action)
+  File "/home/ubuntu/miniconda3/envs/mopo/lib/python3.8/site-packages/gym/wrappers/order_enforcing.py", line 13, in step
+    observation, reward, done, info = self.env.step(action)
+  File "/home/ubuntu/mbpo_uq/abiomed_env.py", line 237, in step
+    output_mult = self.world_model.model.sample_autoregressive_multiple(torch.Tensor(obs.reshape(-1, 90, self.args.seq_dim)).to(self.args.device), torch.Tensor(action.reshape(1,-1)).to(self.args.device), num_samples=num_samples,)
+  File "/home/ubuntu/mbpo_uq/models/world_transformer.py", line 270, in sample_autoregressive_multiple
+    output = self.forward(input_i, pl_i)
+  File "/home/ubuntu/mbpo_uq/models/world_transformer.py", line 240, in forward
+    pp = torch.cat([encoded_src[:, -1, :], pl], 1)
+RuntimeError: Expected all tensors to be on the same device, but found at least two devices, cuda:7 and cuda:0! (when checking argument for argument tensors in method wrapper_CUDA_cat)

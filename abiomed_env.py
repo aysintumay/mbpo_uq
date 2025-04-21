@@ -9,6 +9,7 @@ import scoring
 from sklearn.preprocessing import MinMaxScaler
 
 from common.buffer import ReplayBuffer
+from common import util
 from models.world_transformer import WorldTransformer
 
 
@@ -16,8 +17,8 @@ class AbiomedEnv(gym.Env):
     def __init__(self, args=None, logger=None, scaler_info=None, offline_buffer = None):
         super(AbiomedEnv, self).__init__()
         # Replace obs_dim and action_dim with actual dimensions
-        self.observation_space = spaces.Box(low=-1, high=1, shape=(12*90,), dtype=np.float32)
-        self.action_space = spaces.Box(low=-1, high=1, shape=(1,), dtype=np.float32)
+        self.observation_space = spaces.Box(low=-7, high=20, shape=(12*90,), dtype=np.float32)
+        self.action_space = spaces.Box(low=-2.39, high=1.38, shape=(1,), dtype=np.float32)
         self.id = 'Abiomed-v0'
     
         self.pretrained = args.pretrained
@@ -32,12 +33,10 @@ class AbiomedEnv(gym.Env):
 
         self.world_model = WorldTransformer(args = self.args, logger = self.logger, pretrained = self.pretrained)
         # self.trained_world_model = self.world_model.load_model()
-        self.data = self.load_data()
+        self.data = self.qlearning_dataset()
         self.current_index = 0
 
         
-
-
     def load_data(self, offline_buffer=None):
 
 
@@ -48,7 +47,7 @@ class AbiomedEnv(gym.Env):
             #buffer = StandardBuffer(state_dim, 12, 1e6, 'cpu',action_size=length)
         
             obs = []
-            next_obs = []
+            
             action_l = []
             reward_l = []
             done_l = []
@@ -62,26 +61,21 @@ class AbiomedEnv(gym.Env):
                 unnorm_row = data[i]
                 reward = self.compute_reward(unnorm_row[90:, :12])
 
-                # reward = reward/31
-                state = row[:90, :12].flatten()
-                next_state = row[90:, :12].flatten()
-
+                observations = row[:, :12]
                 #take p-level as action
                 action = row[90:, 12].mean()
                 all_action =  row[90:, 12]
                 done = 0
 
-                if np.isnan(state).any() or np.isnan(next_state).any():
+                if np.isnan(observations).any():
                     continue  
                 # append to each arry
-                obs.append(state)
-                next_obs.append(next_state)
+                obs.append(observations)
                 action_l.append(action)
                 reward_l.append(reward)
                 done_l.append(done)
                 full_action_l.append(all_action)  # Store the full action for analysis
 
-                    
             normalized_rewards = self.normalize_reward(reward_l)
                     
             return {
@@ -89,7 +83,6 @@ class AbiomedEnv(gym.Env):
                     'actions': np.array(action_l).reshape(-1, 1),  # Reshape to ensure it's 2D
                     'rewards': np.array(normalized_rewards),
                     'terminals': np.array(done_l),
-                    'next_observations': np.array(next_obs),
                     'full_actions': np.array(full_action_l)  # Store the full action for analysis
                     }
     
@@ -104,15 +97,15 @@ class AbiomedEnv(gym.Env):
                 self.rwd_stds = train.std(axis=(0, 1))
                 train_dict = generate_buffer(train)
 
-                if not os.path.exists('intermediate_data'):
-                    os.makedirs('intermediate_data')
-                with open(os.path.join('intermediate_data',f'dataset_train_0.pkl'), 'wb') as f:
+                # if not os.path.exists('intermediate_data'):
+                #     os.makedirs('intermediate_data')
+                with open(os.path.join('/data/abiomed_tmp/intermediate_data_uambpo',f'dataset_train_0.pkl'), 'wb') as f:
                     pickle.dump(train_dict, f)
                 
             else:
                 train = train[:, :, :-1]
                 train_dict = generate_buffer(train)
-                with open(os.path.join('intermediate_data',f'dataset_test_0.pkl'), 'wb') as f:
+                with open(os.path.join('/data/abiomed_tmp/intermediate_data_uambpo',f'dataset_test_0.pkl'), 'wb') as f:
                     pickle.dump(train_dict, f)
 
             return train_dict
@@ -137,33 +130,86 @@ class AbiomedEnv(gym.Env):
         return normalized_rewards
 
 
-    def get_dataset(self):
+    def qlearning_dataset(self, dataset=None, terminate_on_end=False, **kwargs):
+        
+        """
+        Returns datasets formatted for use by standard Q-learning algorithms,
+        with observations, actions, next_observations, rewards, and a terminal
+        flag.
 
-        return self.load_data()
-     
+        Args:
+            env: An OfflineEnv object.
+            dataset: An optional dataset to pass in for processing. If None,
+                the dataset will default to env.get_dataset()
+            terminate_on_end (bool): Set done=True on the last timestep
+                in a trajectory. Default is False, and will discard the
+                last timestep in each trajectory.
+            **kwargs: Arguments to pass to env.get_dataset().
 
-    def reset(self):
-        self.current_index = 0
-        return self.data['observations'][self.current_index]
-    
-    def get_pl(self):
-        return self.data['actions'][self.current_index]
-    
-    def get_full_pl(self):
-        return self.data['full_actions'][self.current_index]
-    
-    def get_next_obs(self):
-        return self.data['next_observations'][self.current_index]
-    
-    def get_obs(self):
-        return self.data['observations'][self.current_index]
-    
-    def unnormalize(self, data, idx):
-         return data  * self.rwd_stds[idx] +  self.rwd_means[idx]
-    
-    def normalize(self, data, idx):
-        return (data - self.rwd_means[idx]) / self.rwd_stds[idx]
+        Returns:
+            A dictionary containing keys:
+                observations: An N x dim_obs array of observations.
+                actions: An N x dim_action array of actions.
+                next_observations: An N x dim_obs array of next observations.
+                rewards: An N-dim float array of rewards.
+                terminals: An N-dim boolean array of "done" or episode termination flags.
+        """
+        if dataset is None:
+            dataset = self.get_dataset(**kwargs)
 
+        N = dataset['rewards'].shape[0]
+        obs_ = []
+        next_obs_ = []
+        action_ = []
+        reward_ = []
+        done_ = []
+        full_action_ = []
+
+        # The newer version of the dataset adds an explicit
+        # timeouts field. Keep old method for backwards compatability.
+        use_timeouts = False
+        if 'timeouts' in dataset:
+            use_timeouts = True
+
+        episode_step = 0
+        for i in range(N):
+
+            obs = dataset['observations'][i, :90, :12].flatten()
+            new_obs = dataset['observations'][i, 90:, :12].flatten()
+            action = dataset['actions'][i].astype(np.float32)
+            full_action = dataset['full_actions'][i].astype(np.float32)
+            reward = dataset['rewards'][i].astype(np.float32)
+            done_bool = bool(dataset['terminals'][i])
+
+            # if use_timeouts:
+            #     final_timestep = dataset['timeouts'][i]
+            # else:
+            #     final_timestep = (episode_step == self._max_episode_steps - 1)
+            # if (not terminate_on_end) and final_timestep:
+            #     # Skip this transition and don't apply terminals on the last step of an episode
+            #     episode_step = 0
+            #     continue  
+            if done_bool:
+                episode_step = 0
+
+            obs_.append(obs)
+            next_obs_.append(new_obs)
+            action_.append(action)
+            full_action_.append(full_action)
+            reward_.append(reward)
+            done_.append(done_bool)
+            episode_step += 1
+
+        return {
+            'observations': np.array(obs_),
+            'actions': np.array(action_),
+            'full_actions': np.array(full_action_),
+            'next_observations': np.array(next_obs_),
+            'rewards': np.array(reward_),
+            'terminals': np.array(done_),
+        }
+
+    
     def step(self, action):
         """Run one timestep of the environment's dynamics. When end of
         episode is reached, you are responsible for calling `reset()`
@@ -182,17 +228,14 @@ class AbiomedEnv(gym.Env):
         """
 
 
-        if self.current_index%2 == 0:
-            obs = self.data['observations'][self.current_index]
-            next_state = self.data['next_observations'][self.current_index]
-        else:
-            obs = self.data['next_observations'][self.current_index-1]
-            next_state = self.data['observations'][self.current_index]
+        
+        obs = self.data['next_observations'][self.current_index]
+        next_state = self.data['observations'][self.current_index]
             
         dataloder = self.world_model.resize(obs, action, next_state)
         next_obs = self.world_model.predict(dataloder)
-        num_samples = 50
-        output_mult = self.world_model.model.sample_autoregressive_multiple(torch.Tensor(obs.reshape(-1, 90, self.args.seq_dim)).to(self.args.device), torch.Tensor(action.reshape(1,-1)).to(self.args.device), num_samples=num_samples,)
+        num_samples = self.args.num_samples
+        output_mult = self.world_model.model.sample_autoregressive_multiple(torch.Tensor(obs.reshape(-1, 90, self.args.seq_dim)).to(util.device), torch.Tensor(action.reshape(1,-1)).to(util.device), num_samples=num_samples,)
         # output_mult_all.append(output_mult)
         next_obs_unnorm = self.unnormalize(next_obs, np.arange(0,12))
         output_mult = output_mult.detach().cpu().numpy()
@@ -208,6 +251,7 @@ class AbiomedEnv(gym.Env):
         info = {'crps': crps}
         self.current_index += 1
         return next_obs, reward, done, info
+    
 
     def compute_reward(self, data, crps=None, map_dim = 0, pulsat_dim = 7, hr_dim=9, lvedp_dim=4):
         ## GETS rid of min map- redundant
@@ -272,6 +316,32 @@ class AbiomedEnv(gym.Env):
 
         
         return -score
+    
+
+    def get_dataset(self):
+        return self.load_data()
+
+    def reset(self):
+        self.current_index = 0
+        return self.data['observations'][self.current_index]
+    
+    def get_pl(self):
+        return self.data['actions'][self.current_index]
+    
+    def get_full_pl(self):
+        return self.data['full_actions'][self.current_index]
+    
+    def get_next_obs(self):
+        return self.data['next_observations'][self.current_index]
+    
+    def get_obs(self):
+        return self.data['observations'][self.current_index]
+    
+    def unnormalize(self, data, idx):
+         return data  * self.rwd_stds[idx] +  self.rwd_means[idx]
+    
+    def normalize(self, data, idx):
+        return (data - self.rwd_means[idx]) / self.rwd_stds[idx]
 
 
     def compute_reward_smooth(data, map_dim=0, pulsat_dim=6, hr_dim=7, lvedp_dim=3, crps = None):

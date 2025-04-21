@@ -1,0 +1,17 @@
+{"time":"2025-04-21T05:42:47.635021618Z","level":"INFO","msg":"stream: starting","core version":"0.19.8","symlink path":"/home/ubuntu/mbpo_uq/wandb/run-20250421_054247-l25fy4wc/logs/debug-core.log"}
+{"time":"2025-04-21T05:42:47.847140962Z","level":"INFO","msg":"created new stream","id":"l25fy4wc"}
+{"time":"2025-04-21T05:42:47.847213603Z","level":"INFO","msg":"stream: started","id":"l25fy4wc"}
+{"time":"2025-04-21T05:42:47.847276144Z","level":"INFO","msg":"writer: Do: started","stream_id":"l25fy4wc"}
+{"time":"2025-04-21T05:42:47.847475116Z","level":"INFO","msg":"handler: started","stream_id":"l25fy4wc"}
+{"time":"2025-04-21T05:42:47.847527276Z","level":"INFO","msg":"sender: started","stream_id":"l25fy4wc"}
+{"time":"2025-04-21T05:42:48.017262866Z","level":"INFO","msg":"Starting system monitor"}
+{"time":"2025-04-21T05:49:08.163449467Z","level":"WARN","msg":"handler: ignoring partial history record","step":0,"current":11}
+{"time":"2025-04-21T05:49:08.164458119Z","level":"WARN","msg":"handler: ignoring partial history record","step":0,"current":11}
+{"time":"2025-04-21T05:50:01.804337257Z","level":"INFO","msg":"stream: closing","id":"l25fy4wc"}
+{"time":"2025-04-21T05:50:01.804422459Z","level":"INFO","msg":"Stopping system monitor"}
+{"time":"2025-04-21T05:50:01.805654014Z","level":"INFO","msg":"Stopped system monitor"}
+{"time":"2025-04-21T05:50:02.229034187Z","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2025-04-21T05:50:02.353584702Z","level":"INFO","msg":"handler: closed","stream_id":"l25fy4wc"}
+{"time":"2025-04-21T05:50:02.353708403Z","level":"INFO","msg":"writer: Close: closed","stream_id":"l25fy4wc"}
+{"time":"2025-04-21T05:50:02.353834354Z","level":"INFO","msg":"sender: closed","stream_id":"l25fy4wc"}
+{"time":"2025-04-21T05:50:02.353866065Z","level":"INFO","msg":"stream: closed","id":"l25fy4wc"}
