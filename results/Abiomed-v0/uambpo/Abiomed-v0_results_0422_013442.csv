@@ -1,0 +1,4 @@
+seed,mean_return,std_return,mean_length,std_length,mean_accuracy,std_accuracy,mean_1_off_accuracy,std_1_off_accuracy,iter
+1,-16.881069678604604,0.004653300226522411,1.0,0.0,0.0,0.0,0.0,0.0,0
+1,-16.661608169245724,0.007599228120282091,1.0,0.0,0.0,0.0,0.0,0.0,1
+1,,,1.0,0.0,0.0,0.0,0.0,0.0,2

@@ -91,6 +91,7 @@ class WorldTransformer:
         if not os.path.exists(self.model_save_dir):
             os.makedirs(self.model_save_dir)
         torch.save(self.model.to('cpu').state_dict(),  os.path.join('/data/models/world_model', f"checkpoint_epoch_{self.args.task}_{self.nepochs}.pth"))
+        self.model.to(self.device)
         self.logger.print("World model total time: {:.3f}s".format(time.time() - start_time))
         return self.model
 
@@ -142,7 +143,11 @@ class WorldTransformer:
                 outputs = []
                 input_i = src
                 for i in range(9):
+
                     pl_i = pl[:, i*10:(i+1)*10].to(self.device)
+                    # print(pl_i.device)
+                    # print(self.trained_model.device)
+                    # print(input_i.device)
                     output = self.trained_model(input_i, pl_i)
                     output_reshaped = output.reshape([output.shape[0], 11, self.seq_dim])[:, 1:,:] #only take new predictions, ignore first datapoint
                     outputs.append(output_reshaped)

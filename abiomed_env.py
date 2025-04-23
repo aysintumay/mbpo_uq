@@ -35,10 +35,9 @@ class AbiomedEnv(gym.Env):
         # self.trained_world_model = self.world_model.load_model()
         self.data = self.qlearning_dataset()
         self.current_index = 0
+                 
 
-        
-    def load_data(self, offline_buffer=None):
-
+    def get_dataset(self,  **kwargs):
 
         def generate_buffer(data, length=90):
 
@@ -65,7 +64,7 @@ class AbiomedEnv(gym.Env):
                 #take p-level as action
                 action = row[90:, 12].mean()
                 all_action =  row[90:, 12]
-                done = 0
+                done = np.array([0])
 
                 if np.isnan(observations).any():
                     continue  
@@ -86,7 +85,7 @@ class AbiomedEnv(gym.Env):
                     'full_actions': np.array(full_action_l)  # Store the full action for analysis
                     }
     
-        if offline_buffer is None:
+        if self.offline_buffer is None:
 
             train = torch.load(f"/data/abiomed_tmp/processed/pp_{self.args.data_name}_amicgs.pt").numpy()
             
@@ -95,28 +94,17 @@ class AbiomedEnv(gym.Env):
                 train = train[: ,:, :-1]
                 self.rwd_means = train.mean(axis=(0, 1))
                 self.rwd_stds = train.std(axis=(0, 1))
-                train_dict = generate_buffer(train)
-
-                # if not os.path.exists('intermediate_data'):
-                #     os.makedirs('intermediate_data')
-                with open(os.path.join('/data/abiomed_tmp/intermediate_data_uambpo',f'dataset_train_0.pkl'), 'wb') as f:
-                    pickle.dump(train_dict, f)
-                
+                train_dict = generate_buffer(train)      
             else:
                 train = train[:, :, :-1]
                 train_dict = generate_buffer(train)
-                with open(os.path.join('/data/abiomed_tmp/intermediate_data_uambpo',f'dataset_test_0.pkl'), 'wb') as f:
-                    pickle.dump(train_dict, f)
-
             return train_dict
         #save rwd_stds and rwd_means and scaler for test usage
         else:
-            
-            offline_buffer['actions'] =  self.normalize(offline_buffer['actions'], idx = 12)
-            offline_buffer['rewards'] = self.normalize_reward(offline_buffer['rewards'])
-            
-            return offline_buffer
-        
+            self.offline_buffer['actions'] =  self.normalize(self.offline_buffer['actions'], idx = 12)
+            self.offline_buffer['full_actions'] =  self.normalize(self.offline_buffer['full_actions'], idx = 12)
+            self.offline_buffer['rewards'] = self.normalize_reward(self.offline_buffer['rewards'])
+            return self.offline_buffer    
     
     def normalize_reward(self, rewards):
         if self.scaler is not None:
@@ -154,60 +142,64 @@ class AbiomedEnv(gym.Env):
                 rewards: An N-dim float array of rewards.
                 terminals: An N-dim boolean array of "done" or episode termination flags.
         """
-        if dataset is None:
-            dataset = self.get_dataset(**kwargs)
+        dataset = self.get_dataset( **kwargs)
 
-        N = dataset['rewards'].shape[0]
-        obs_ = []
-        next_obs_ = []
-        action_ = []
-        reward_ = []
-        done_ = []
-        full_action_ = []
+        if self.offline_buffer is None:
+            
+            N = dataset['rewards'].shape[0]
+            obs_ = []
+            next_obs_ = []
+            action_ = []
+            reward_ = []
+            done_ = []
+            full_action_ = []
 
-        # The newer version of the dataset adds an explicit
-        # timeouts field. Keep old method for backwards compatability.
-        use_timeouts = False
-        if 'timeouts' in dataset:
-            use_timeouts = True
+            # The newer version of the dataset adds an explicit
+            # timeouts field. Keep old method for backwards compatability.
+            use_timeouts = False
+            if 'timeouts' in dataset:
+                use_timeouts = True
 
-        episode_step = 0
-        for i in range(N):
+            episode_step = 0
+            for i in range(N):
 
-            obs = dataset['observations'][i, :90, :12].flatten()
-            new_obs = dataset['observations'][i, 90:, :12].flatten()
-            action = dataset['actions'][i].astype(np.float32)
-            full_action = dataset['full_actions'][i].astype(np.float32)
-            reward = dataset['rewards'][i].astype(np.float32)
-            done_bool = bool(dataset['terminals'][i])
+                obs = dataset['observations'][i, :90, :12].flatten()
+                new_obs = dataset['observations'][i, 90:, :12].flatten()
+                action = dataset['actions'][i].astype(np.float32)
+                full_action = dataset['full_actions'][i].astype(np.float32)
+                reward = dataset['rewards'][i].astype(np.float32)
+                done_bool = bool(dataset['terminals'][i])
 
-            # if use_timeouts:
-            #     final_timestep = dataset['timeouts'][i]
-            # else:
-            #     final_timestep = (episode_step == self._max_episode_steps - 1)
-            # if (not terminate_on_end) and final_timestep:
-            #     # Skip this transition and don't apply terminals on the last step of an episode
-            #     episode_step = 0
-            #     continue  
-            if done_bool:
-                episode_step = 0
+                # if use_timeouts:
+                #     final_timestep = dataset['timeouts'][i]
+                # else:
+                #     final_timestep = (episode_step == self._max_episode_steps - 1)
+                # if (not terminate_on_end) and final_timestep:
+                #     # Skip this transition and don't apply terminals on the last step of an episode
+                #     episode_step = 0
+                #     continue  
+                if done_bool:
+                    episode_step = 0
 
-            obs_.append(obs)
-            next_obs_.append(new_obs)
-            action_.append(action)
-            full_action_.append(full_action)
-            reward_.append(reward)
-            done_.append(done_bool)
-            episode_step += 1
-
-        return {
-            'observations': np.array(obs_),
-            'actions': np.array(action_),
-            'full_actions': np.array(full_action_),
-            'next_observations': np.array(next_obs_),
-            'rewards': np.array(reward_),
-            'terminals': np.array(done_),
-        }
+                obs_.append(obs)
+                next_obs_.append(new_obs)
+                action_.append(action)
+                full_action_.append(full_action)
+                reward_.append(reward)
+                done_.append(done_bool)
+                episode_step += 1
+            return {
+                    'observations': np.array(obs_),
+                    'actions': np.array(action_),
+                    'full_actions': np.array(full_action_),
+                    'next_observations': np.array(next_obs_),
+                    'rewards': np.array(reward_),
+                    'terminals': np.array(done_),
+                }
+        else:
+            return dataset
+           
+        
 
     
     def step(self, action):
@@ -229,8 +221,8 @@ class AbiomedEnv(gym.Env):
 
 
         
-        obs = self.data['next_observations'][self.current_index]
-        next_state = self.data['observations'][self.current_index]
+        obs = self.data['observations'][self.current_index]
+        next_state = self.data['next_observations'][self.current_index]
             
         dataloder = self.world_model.resize(obs, action, next_state)
         next_obs = self.world_model.predict(dataloder)
@@ -313,13 +305,9 @@ class AbiomedEnv(gym.Env):
         """
         if crps:
             score = score - 0.1*crps
-
         
         return -score
     
-
-    def get_dataset(self):
-        return self.load_data()
 
     def reset(self):
         self.current_index = 0

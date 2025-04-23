@@ -59,14 +59,14 @@ def main(args):
 
     results = []
 
-    for i in np.arange(0,2):
+    for i in np.arange(0,3):
         start_time = time.time()
         print(f"====================Iteration {i+1}====================")
         if i == 0:
             
             offline_buffer_train = None
             offline_buffer_test = None
-        norm_info = {'rwd_stds': None, 'rwd_means':None, 'scaler': None}
+            norm_info = {'rwd_stds': None, 'rwd_means':None, 'scaler': None}
         
         #offline buffer_load
        
@@ -77,7 +77,8 @@ def main(args):
 
         args.pretrained = False
         args.data_name = 'train'  
-        args.eval_episodes = 1000 #1000  
+        # args.eval_episodes = 7 #1000 
+    
         #train on offline dataset or replayed dataset
         norm_info, trainer = train(i, logger, run, model_logger, args, norm_info, offline_buffer_train if offline_buffer_train is not None else None, )
         
@@ -96,7 +97,7 @@ def main(args):
 
         # args.policy_path = os.path.join(log_path, f"policy_{args.task}.pth")
 
-        args.eval_episodes = 49939
+        trainer._eval_episodes = 49939
         args.data_name = 'train'
 
         args.mode = 'offline'
@@ -113,12 +114,12 @@ def main(args):
             pickle.dump(dataset_train, f)
 
         #get renewed test dataset of 20k
+        trainer._eval_episodes = 28015
         args.data_name = 'test'
-        args.eval_episodes = 28015
         args.mode = 'online'
         args.pretrained = True
-
         print( 'pretrained', args.pretrained, '\nstarted testing')
+
         dataset_test, eval_info = test(i, args,model_logger,norm_info, policy, trainer, offline_buffer_test if offline_buffer_test is not None else None, log_path)
         #save the dataset
         with open(os.path.join('/data/abiomed_tmp/intermediate_data_uambpo',f'dataset_test_{i+1}.pkl'), 'wb') as f:
@@ -127,7 +128,7 @@ def main(args):
         offline_buffer_train = dataset_train
         offline_buffer_test = dataset_test
 
-        norm_info['scaler'] = None
+        norm_info['scaler'] = None #RECALCULATE REWARD SCALER
 
         mean_return = np.mean(eval_info["eval/episode_reward"])
         std_return = np.std(eval_info["eval/episode_reward"])
@@ -139,14 +140,19 @@ def main(args):
             std_accuracy = np.std(eval_info["eval/episode_accuracy"])
             mean_1_off_accuracy = np.mean(eval_info["eval/episode_1_off_accuracy"])
             std_1_off_accuracy = np.std(eval_info["eval/episode_1_off_accuracy"])
+            mean_1_mse = np.mean(eval_info["eval/mse"])
+            std_1_mse = np.std(eval_info["eval/mse"])
 
             print(f"Iteration {i} - Seed {args.seed} - Accuracy: {mean_accuracy:.2f} ± {std_accuracy:.2f}")
             print(f"Iteration {i} - Seed {args.seed} - 1-off Accuracy: {mean_1_off_accuracy:.2f} ± {std_1_off_accuracy:.2f}")
+            print(f"Iteration {i} - Seed {args.seed} - MSE: {mean_1_mse:.2f} ± {std_1_mse:.2f}")
             wandb.log({
                 "mean_accuracy": mean_accuracy,
                 "std_accuracy": std_accuracy,
                 "mean_1_off_accuracy": mean_1_off_accuracy,
                 "std_1_off_accuracy": std_1_off_accuracy,
+                "mean_1_mse": mean_1_mse,
+                "std_1_mse": std_1_mse,
                 "seed": args.seed
             })
 
@@ -160,6 +166,8 @@ def main(args):
                 'std_accuracy': std_accuracy,
                 'mean_1_off_accuracy': mean_1_off_accuracy,
                 'std_1_off_accuracy': std_1_off_accuracy,
+                'mean_1_mse': mean_1_mse,
+                'std_1_mse': std_1_mse,
                 'iter': i
             })
             time_total = time.time() - start_time
@@ -215,7 +223,7 @@ def get_args():
     parser.add_argument("--dynamics-lr", type=float, default=0.001)
     parser.add_argument("--n-ensembles", type=int, default=7)
     parser.add_argument("--n-elites", type=int, default=5)
-    parser.add_argument("--reward-penalty-coef", type=float, default=1.0) #1e=6
+    parser.add_argument("--reward-penalty-coef", type=float, default=1) #1e=6
     parser.add_argument("--rollout-length", type=int, default=5) #1 
     parser.add_argument("--rollout-batch-size", type=int, default=5000) #50000
     parser.add_argument("--rollout-freq", type=int, default=1000)
@@ -227,7 +235,7 @@ def get_args():
 
     parser.add_argument("--epoch", type=int, default=50) #1000 #change
     parser.add_argument("--step-per-epoch", type=int, default=1000) # will be equated to #of samples in train and test #change
-    parser.add_argument("--eval_episodes", type=int, default=10) # #change
+    parser.add_argument("--eval_episodes", type=int, default=1000) # #change
     parser.add_argument("--batch-size", type=int, default=256)
     parser.add_argument("--terminal_counter", type=int, default=1) 
 
@@ -250,7 +258,7 @@ def get_args():
                         help='Specify the learning rate.')
     parser.add_argument('-encoder_dropout', '--encoder_dropout', type=float, metavar='<size>', default=0.1,
                 help='Set the tunable dropout.')
-    parser.add_argument('-decoder_dropout', '--decoder_dropout', type=float, metavar='<size>', default=0,
+    parser.add_argument('-decoder_dropout', '--decoder_dropout', type=float, metavar='<size>', default=0.1,
                 help='Set the tunable dropout.')
     parser.add_argument('-dim_model', '--dim_model', type=int, metavar='<size>', default=256,
                 help='Set the number of encoder layers.')

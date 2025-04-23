@@ -1,0 +1,116 @@
+World model total time: 201.513s
+Start training dynamics
+loss/model_eval_mse_loss: 0.136078
+loss/model_eval_mse_loss: 0.134059
+loss/model_eval_mse_loss: 0.130986
+loss/model_eval_mse_loss: 0.127367
+loss/model_eval_mse_loss: 0.126007
+loss/model_eval_mse_loss: 0.124931
+loss/model_eval_mse_loss: 0.125148
+loss/model_eval_mse_loss: 0.124454
+loss/model_eval_mse_loss: 0.124086
+loss/model_eval_mse_loss: 0.122416
+loss/model_eval_mse_loss: 0.123410
+loss/model_eval_mse_loss: 0.123915
+loss/model_eval_mse_loss: 0.121225
+loss/model_eval_mse_loss: 0.120121
+loss/model_eval_mse_loss: 0.119713
+loss/model_eval_mse_loss: 0.121262
+loss/model_eval_mse_loss: 0.119142
+loss/model_eval_mse_loss: 0.119462
+loss/model_eval_mse_loss: 0.119701
+loss/model_eval_mse_loss: 0.120097
+loss/model_eval_mse_loss: 0.120443
+loss/model_eval_mse_loss: 0.122235
+loss/model_eval_mse_loss: 0.119733
+loss/model_eval_mse_loss: 0.121710
+loss/model_eval_mse_loss: 0.121306
+loss/model_eval_mse_loss: 0.121997
+loss/model_eval_mse_loss: 0.120253
+loss/model_eval_mse_loss: 0.121115
+total time: 404.945s
+Epoch #10: episode_accuracy: 0.000 ± 0.000,                                    episode_1_off_accuracy: 0.000 ± 0.000
+Epoch #10: episode_reward: -16.704 ± 0.017,                                episode_length: 1.000 ± 0.000
+Epoch #20: episode_accuracy: 0.000 ± 0.000,                                    episode_1_off_accuracy: 0.000 ± 0.000
+Epoch #20: episode_reward: -16.304 ± 0.015,                                episode_length: 1.000 ± 0.000
+Epoch #30: episode_accuracy: 0.000 ± 0.000,                                    episode_1_off_accuracy: 0.000 ± 0.000
+Epoch #30: episode_reward: -16.514 ± 0.016,                                episode_length: 1.000 ± 0.000
+Epoch #40: episode_accuracy: 0.000 ± 0.000,                                    episode_1_off_accuracy: 0.000 ± 0.000
+Epoch #40: episode_reward: -16.331 ± 0.014,                                episode_length: 1.000 ± 0.000
+Epoch #50: episode_accuracy: 0.000 ± 0.000,                                    episode_1_off_accuracy: 0.000 ± 0.000
+Epoch #50: episode_reward: -16.320 ± 0.015,                                episode_length: 1.000 ± 0.000
+total time: 5862.181s
+World model total time: 319.771s
+Start training dynamics
+loss/model_eval_mse_loss: 0.136070
+loss/model_eval_mse_loss: 0.133428
+loss/model_eval_mse_loss: 0.125949
+loss/model_eval_mse_loss: 0.124902
+loss/model_eval_mse_loss: 0.123211
+loss/model_eval_mse_loss: 0.121998
+loss/model_eval_mse_loss: 0.123479
+loss/model_eval_mse_loss: 0.123151
+loss/model_eval_mse_loss: 0.121119
+loss/model_eval_mse_loss: 0.120191
+loss/model_eval_mse_loss: 0.120032
+loss/model_eval_mse_loss: 0.134249
+loss/model_eval_mse_loss: 0.120222
+loss/model_eval_mse_loss: 0.121139
+loss/model_eval_mse_loss: 0.119936
+loss/model_eval_mse_loss: 0.119662
+loss/model_eval_mse_loss: 0.121372
+loss/model_eval_mse_loss: 0.119812
+loss/model_eval_mse_loss: 0.122794
+loss/model_eval_mse_loss: 0.120319
+total time: 363.836s
+Epoch #10: episode_accuracy: 0.000 ± 0.000,                                    episode_1_off_accuracy: 0.000 ± 0.000
+Epoch #10: episode_reward: -16.343 ± 0.011,                                episode_length: 1.000 ± 0.000
+Epoch #20: episode_accuracy: 0.000 ± 0.000,                                    episode_1_off_accuracy: 0.000 ± 0.000
+Epoch #20: episode_reward: -16.290 ± 0.011,                                episode_length: 1.000 ± 0.000
+Epoch #30: episode_accuracy: 0.000 ± 0.000,                                    episode_1_off_accuracy: 0.000 ± 0.000
+Epoch #30: episode_reward: -16.338 ± 0.012,                                episode_length: 1.000 ± 0.000
+Epoch #40: episode_accuracy: 0.000 ± 0.000,                                    episode_1_off_accuracy: 0.000 ± 0.000
+Epoch #40: episode_reward: -16.337 ± 0.013,                                episode_length: 1.000 ± 0.000
+Epoch #50: episode_accuracy: 0.000 ± 0.000,                                    episode_1_off_accuracy: 0.000 ± 0.000
+Epoch #50: episode_reward: -16.337 ± 0.013,                                episode_length: 1.000 ± 0.000
+total time: 16857.052s
+World model total time: 377.116s
+Start training dynamics
+loss/model_eval_mse_loss: 0.136031
+loss/model_eval_mse_loss: 0.130606
+loss/model_eval_mse_loss: 0.126755
+loss/model_eval_mse_loss: 0.127486
+loss/model_eval_mse_loss: 0.128945
+loss/model_eval_mse_loss: 0.127576
+loss/model_eval_mse_loss: 0.125353
+loss/model_eval_mse_loss: 0.124583
+loss/model_eval_mse_loss: 0.123722
+loss/model_eval_mse_loss: 0.123039
+loss/model_eval_mse_loss: 0.123225
+loss/model_eval_mse_loss: 0.121968
+loss/model_eval_mse_loss: 0.122750
+loss/model_eval_mse_loss: 0.121624
+loss/model_eval_mse_loss: 0.120688
+loss/model_eval_mse_loss: 0.120944
+loss/model_eval_mse_loss: 0.122184
+loss/model_eval_mse_loss: 0.120588
+loss/model_eval_mse_loss: 0.120835
+loss/model_eval_mse_loss: 0.120730
+loss/model_eval_mse_loss: 0.120635
+loss/model_eval_mse_loss: 0.119635
+loss/model_eval_mse_loss: 0.120610
+loss/model_eval_mse_loss: 0.120518
+loss/model_eval_mse_loss: 0.120915
+loss/model_eval_mse_loss: 0.121824
+total time: 639.555s
+Epoch #10: episode_accuracy: 0.000 ± 0.000,                                    episode_1_off_accuracy: 0.000 ± 0.000
+Epoch #10: episode_reward: -16.405 ± 0.015,                                episode_length: 1.000 ± 0.000
+Epoch #20: episode_accuracy: 0.000 ± 0.000,                                    episode_1_off_accuracy: 1.000 ± 0.000
+Epoch #20: episode_reward: -16.658 ± 0.013,                                episode_length: 1.000 ± 0.000
+Epoch #30: episode_accuracy: 0.000 ± 0.000,                                    episode_1_off_accuracy: 1.000 ± 0.000
+Epoch #30: episode_reward: -16.668 ± 0.013,                                episode_length: 1.000 ± 0.000
+Epoch #40: episode_accuracy: 0.000 ± 0.000,                                    episode_1_off_accuracy: 1.000 ± 0.000
+Epoch #40: episode_reward: -16.668 ± 0.013,                                episode_length: 1.000 ± 0.000
+Epoch #50: episode_accuracy: 0.000 ± 0.000,                                    episode_1_off_accuracy: 1.000 ± 0.000
+Epoch #50: episode_reward: -16.670 ± 0.012,                                episode_length: 1.000 ± 0.000
+total time: 23558.605s

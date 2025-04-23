@@ -107,7 +107,8 @@ def train(i, logger, run, model_logger, args, scaler_info, offline_buffer = None
         if offline_buffer is not None:
             kwargs["offline_buffer"] = offline_buffer
         env = gym.make(args.task, **kwargs)
-        dataset = env.qlearning_dataset()
+        # dataset = env.qlearning_dataset()
+        dataset = env.data
         #save trained world model
         trained_w_m = env.world_model.trained_model
         torch.save(trained_w_m, os.path.join(model_logger.log_path, f'world_model_{i}.pth'))
@@ -121,9 +122,12 @@ def train(i, logger, run, model_logger, args, scaler_info, offline_buffer = None
    
 
     env.seed(args.seed)
-
-    # with open(os.path.join('intermediate_data',f'dataset_train_0.pkl'), 'wb') as f:
-    #         pickle.dump(dataset, f)
+    if (i == 0) & (args.data_name == 'train'):
+        data_save = env.data.copy()
+        data_save['rewards'] = env.normalize_reward(data_save['rewards'])
+        
+        with open(os.path.join('/data/abiomed_tmp/intermediate_data_uambpo',f'dataset_train_0.pkl'), 'wb') as f:
+            pickle.dump(data_save, f)
 
 
     # import configs

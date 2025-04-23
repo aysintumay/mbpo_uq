@@ -1,0 +1,6 @@
+World model total time: 18.637s
+Start training dynamics
+loss/model_eval_mse_loss: 0.136031
+loss/model_eval_mse_loss: 0.133803
+loss/model_eval_mse_loss: 0.131363
+loss/model_eval_mse_loss: 0.128684

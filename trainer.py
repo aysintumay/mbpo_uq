@@ -141,12 +141,14 @@ class Trainer:
                     ep_length_mean, ep_length_std = np.mean(eval_info["eval/episode_length"]), np.std(eval_info["eval/episode_length"])
                     ep_accuracy_mean, ep_accuracy_std = np.mean(eval_info["eval/episode_accuracy"]), np.std(eval_info["eval/episode_accuracy"])
                     ep_1_off_accuracy_mean, ep_1_off_accuracy_std = np.mean(eval_info["eval/episode_1_off_accuracy"]), np.std(eval_info["eval/episode_1_off_accuracy"])
+                    ep_mse_mean, ep_mse_std = np.mean(eval_info["eval/mse"]), np.std(eval_info["eval/mse"])
                     acc_l.append(ep_accuracy_mean)
                     off_acc.append(ep_1_off_accuracy_mean)
                     acc_std_l.append(ep_accuracy_std)
                     off_acc_std.append(ep_1_off_accuracy_std)
                     self.logger.record("eval/episode_accuracy", ep_accuracy_mean, num_timesteps, printed=False)
                     self.logger.record("eval/episode_1_off_accuracy", ep_1_off_accuracy_mean, num_timesteps, printed=False)
+                    self.logger.record("eval/mse", ep_mse_mean, num_timesteps, printed=False)
                     self.logger.print(f"Epoch #{e}: episode_accuracy: {ep_accuracy_mean:.3f} ± {ep_accuracy_std:.3f},\
                                     episode_1_off_accuracy: {ep_1_off_accuracy_mean:.3f} ± {ep_1_off_accuracy_std:.3f}"
                                     )
@@ -172,6 +174,7 @@ class Trainer:
             if not os.path.exists(model_save_dir):
                 os.makedirs(model_save_dir)
             torch.save(self.algo.policy.to('cpu').state_dict(), os.path.join(model_save_dir, f"policy_{self.env_name}.pth")) #plot q_values for each epoch
+            print(util.device)
             self.algo.policy.to(util.device)        
         if self.run_id != 0: 
             plot_q_value(np.array(q1_l).reshape(-1,1), 'Q1')
@@ -255,7 +258,12 @@ class Trainer:
 
             full_pl = self.eval_env.get_full_pl()
             next_obs, reward, terminal, info = self.eval_env.step(action) #next state predictions
-            # print(f'reward func rew:{reward}')
+
+            #MSE of next_obs and next_state_gt
+            mse = np.mean((next_obs.reshape(-1,1) - next_state_gt)**2)*self.eval_env.rwd_stds[12]
+
+            
+
             #obs: (0,90) next_state_gt:(90,180) next_obs: (90,180), action: (90,180) act: (90,180)
             crps_list.extend(info['crps'])
             episode_reward += reward
@@ -276,7 +284,9 @@ class Trainer:
                     {"episode_reward": episode_reward,
                       "episode_length": episode_length,
                         "episode_accurcy": acc, 
-                        "episode_1_off_accuracy": acc_1_off}
+                        "episode_1_off_accuracy": acc_1_off,
+                        'mse': mse,
+                        }
                 )
                 num_episodes +=1
                 terminal_counter = 0
@@ -290,7 +300,7 @@ class Trainer:
             #obs, next_obs, reward, done
 
             obs_.append(obs)
-            next_obs_.append(next_obs)
+            next_obs_.append(next_obs.reshape(obs.shape))
             action_.append(action)
             full_action_.append(full_pl)
             reward_.append(reward)
@@ -298,13 +308,14 @@ class Trainer:
 
         #need actions to be unnormalized for plotting
         action_ = self.eval_env.unnormalize(np.array(action_), idx=12)
+        full_action_ = self.eval_env.unnormalize(np.array(full_action_), idx=12).reshape(-1,90)
         dataset = {
                 'observations': np.array(obs_),
                 'actions': np.array(action_).reshape(-1, 1),  # Reshape to ensure it's 2D
                 'rewards': np.array(reward_),
-                'terminals': np.array(terminal),
+                'terminals': np.array(terminal_),
                 'next_observations': np.array(next_obs_),
-                'full_actions': np.array(full_action_).reshape(-1, 1),  # Reshape to ensure it's 2D
+                'full_actions': np.array(full_action_),  # Reshape to ensure it's 2D
             }
         
         return {
@@ -312,6 +323,7 @@ class Trainer:
             "eval/episode_length": [ep_info["episode_length"] for ep_info in eval_ep_info_buffer],
             "eval/episode_accuracy": [ep_info["episode_accurcy"] for ep_info in eval_ep_info_buffer],
             "eval/episode_1_off_accuracy": [ep_info["episode_1_off_accuracy"] for ep_info in eval_ep_info_buffer],
+            "eval/mse": [ep_info["mse"] for ep_info in eval_ep_info_buffer],
         }, dataset
 
 
@@ -353,8 +365,8 @@ class Trainer:
     def eval_bcq(self, y_pred_test, y_test):
 
 
-        pred_unreg =  self.eval_env.unnormalize(np.array(y_pred_test), idx=12)
-        real_unreg = self.eval_env.unnormalize(y_test, idx=12) 
+        pred_unreg =  self.eval_env.unnormalize(np.array(y_pred_test).reshape(-1,1), idx=12)
+        real_unreg = self.eval_env.unnormalize(np.array(y_test).reshape(-1,1), idx=12) 
 
 
         pl_pred_fl = np.round(pred_unreg.flatten())
