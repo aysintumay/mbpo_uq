@@ -1,2 +1,2 @@
 intermediate_data/*.pkl
-wandb/
+wandb/*
