@@ -4,6 +4,7 @@ import os
 import random
 import importlib
 import wandb 
+import pickle
 
 import gym
 import d4rl
@@ -85,14 +86,17 @@ def get_eval(policy, env, logger, trainer, args,):
     if args.task == 'Abiomed-v0':
         ep_accuracy_mean, ep_accuracy_std = np.mean(eval_info["eval/episode_accuracy"]), np.std(eval_info["eval/episode_accuracy"])
         ep_1_off_accuracy_mean, ep_1_off_accuracy_std = np.mean(eval_info["eval/episode_1_off_accuracy"]), np.std(eval_info["eval/episode_1_off_accuracy"])
+        ep_1_mse_mean, ep_1_mse_std = np.mean(eval_info["eval/mse"]), np.std(eval_info["eval/mse"])
 
     if args.task == 'Abiomed-v0':
         logger.record("eval/episode_accuracy", ep_accuracy_mean, args.eval_episodes, printed=False)
-        # logger.record("eval/episode_1_off_accuracy", ep_1_off_accuracy_mean, args.eval_episodes, printed=False)
+        logger.record("eval/episode_1_off_accuracy", ep_1_off_accuracy_mean, args.eval_episodes, printed=False)
+        logger.record("eval/mse", ep_1_mse_mean, args.eval_episodes, printed=False)
         logger.print(f"episode_reward: {ep_reward_mean:.3f} ± {ep_reward_std:.3f},\
                             episode_length: {ep_length_mean:.3f} ± {ep_length_std:.3f},\
                             episode_accuracy: {ep_accuracy_mean:.3f} ± {ep_accuracy_std:.3f},\
-                            episode_1_off_accuracy: {ep_1_off_accuracy_mean:.3f} ± {ep_1_off_accuracy_std:.3f}")
+                            episode_1_off_accuracy: {ep_1_off_accuracy_mean:.3f} ± {ep_1_off_accuracy_std:.3f},\
+                            episode_1_mse: {ep_1_mse_mean:.3f} ± {ep_1_mse_std:.3f}")
     else:
         logger.print(f"episode_reward: {ep_reward_mean:.3f} ± {ep_reward_std:.3f},\
                             episode_length: {ep_length_mean:.3f} ± {ep_length_std:.3f}")
@@ -124,6 +128,8 @@ def get_eval(policy, env, logger, trainer, args,):
 def test(i, args, model_logger, norm_info, sac_policy, trainer, offline_buffer=None, log_path=None):
 
 
+    
+
     log_path = os.path.join(log_path, 'test',  f'ite_{i}', args.mode)
     writer = SummaryWriter(log_path)
     writer.add_text("args", str(args))
@@ -149,6 +155,13 @@ def test(i, args, model_logger, norm_info, sac_policy, trainer, offline_buffer=N
     else:
         env = gym.make(args.task)
 
+    if (i == 0) & (args.data_name == 'test'):
+
+        data_save = env.data.copy()
+        data_save['rewards'] = env.normalize_reward(data_save['rewards'])
+        
+        with open(os.path.join('/data/abiomed_tmp/intermediate_data_uambpo',f'dataset_test_0.pkl'), 'wb') as f:
+            pickle.dump(data_save, f)
     # dataset = d4rl.qlearning_dataset(env)
     # args.obs_shape = env.observation_space.shape
     # args.action_dim = np.prod(env.action_space.shape)

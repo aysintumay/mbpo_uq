@@ -240,5 +240,6 @@ class TransitionModel:
         # model_save_dir = os.path.join(util.logger_model.log_path, info)
         for network_name, network in self.networks.items():
             load_path = os.path.join(model_save_dir, network_name + ".pt")
-            state_dict = torch.load(load_path, map_location='cuda')
+            state_dict = torch.load(load_path)
+            # print(f'trainsition model to {self.device}')
             return network.load_state_dict(state_dict)

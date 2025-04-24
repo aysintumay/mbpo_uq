@@ -1,0 +1,13 @@
+World model total time: 11.483s
+Start training dynamics
+loss/model_eval_mse_loss: 0.990784
+loss/model_eval_mse_loss: 0.990820
+loss/model_eval_mse_loss: 0.990889
+loss/model_eval_mse_loss: 0.990986
+loss/model_eval_mse_loss: 0.991152
+loss/model_eval_mse_loss: 0.991550
+total time: 0.264s
+Epoch #1: episode_accuracy: 0.000 ± 0.000,                                    episode_1_off_accuracy: 0.000 ± 0.000
+Epoch #1: episode_reward: -16.860 ± 0.002,                                episode_length: 1.000 ± 0.000
+total time: 29.064s
+World model total time: 9.526s
