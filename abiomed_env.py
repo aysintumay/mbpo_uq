@@ -35,6 +35,7 @@ class AbiomedEnv(gym.Env):
         # self.trained_world_model = self.world_model.load_model()
         self.data = self.qlearning_dataset()
         self.current_index = 0
+        self.crps_scale = args.crps_scale
                  
 
     def get_dataset(self,  **kwargs):
@@ -304,9 +305,11 @@ class AbiomedEnv(gym.Env):
         else: score+=5 # cpo <=0.5
         """
         if crps:
-            score = score - 0.1*crps
+            final_reward = - score - self.crps_scale * crps
+        else:
+            final_reward = - score
         
-        return -score
+        return final_reward
     
 
     def reset(self):

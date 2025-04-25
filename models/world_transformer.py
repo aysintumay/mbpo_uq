@@ -33,7 +33,7 @@ class WorldTransformer:
         self.encs = getattr(args, 'encs', 2)
         self.lr = getattr(args, 'lr', 0.001)
         self.encoder_dropout = getattr(args, 'encoder_dropout', 0.1)
-        self.decoder_dropout = getattr(args, 'decoder_dropout', 0)
+        self.decoder_dropout = getattr(args, 'decoder_dropout', 0.1)
         self.dim_model = getattr(args, 'dim_model', 256)
         self.args = args
 
@@ -90,7 +90,7 @@ class WorldTransformer:
         
         if not os.path.exists(self.model_save_dir):
             os.makedirs(self.model_save_dir)
-        torch.save(self.model.to('cpu').state_dict(),  os.path.join('/data/models/world_model', f"checkpoint_epoch_{self.args.task}_{self.nepochs}.pth"))
+        torch.save(self.model.to('cpu').state_dict(),  os.path.join('/data/models/world_model', f"checkpoint_epoch_v_1_{self.args.task}_{self.nepochs}.pth"))
         self.model.to(self.device)
         self.logger.print("World model total time: {:.3f}s".format(time.time() - start_time))
         return self.model
@@ -260,30 +260,152 @@ class TimeSeriesTransformer(nn.Module):
         self.eval()  # Optionally, set back to eval mode if needed elsewhere
         return torch.stack(samples)
         
-    def sample_autoregressive_multiple(self, src, pl, num_samples=10):
-        # this is assuming we have pl shape that is 90, not 10 as in training.
+    # def sample_autoregressive_multiple(self, src, pl, num_samples=10):
+    #     # this is assuming we have pl shape that is 90, not 10 as in training.
 
-        self.train()  # Enable dropout during inference
-        samples = []
+    #     self.train()  # Enable dropout during inference
+    #     samples = []
 
-        for _ in range(num_samples):
-            input_i = src
-            outputs = []
+    #     for _ in range(num_samples):
+    #         input_i = src
+    #         outputs = []
             
-            for i in range(9):
-                pl_i = pl[:, i*10:(i+1)*10]
-                output = self.forward(input_i, pl_i)
-                output_reshaped = output.reshape([output.shape[0], 11, input_i.size(2)])[:, 1:,:] #only take new predictions, ignore first datapoint
-                outputs.append(output_reshaped)
-                input_i = torch.concat([input_i[:,10:,:], output_reshaped], axis=1)
+    #         for i in range(9):
+    #             pl_i = pl[:, i*10:(i+1)*10]
+    #             output = self.forward(input_i, pl_i)
+    #             output_reshaped = output.reshape([output.shape[0], 11, input_i.size(2)])[:, 1:,:] #only take new predictions, ignore first datapoint
+    #             outputs.append(output_reshaped)
+    #             input_i = torch.concat([input_i[:,10:,:], output_reshaped], axis=1)
     
-            pred = torch.concat(outputs, axis=1)
-            samples.append(pred)
+    #         pred = torch.concat(outputs, axis=1)
+    #         samples.append(pred)
 
-        self.eval()  # Optionally, set back to eval mode if needed elsewhere
-        #returns num_sample x batch size x forecast horizon x seq_length
-        return torch.stack(samples)
+    #     self.eval()  # Optionally, set back to eval mode if needed elsewhere
+    #     #returns num_sample x batch size x forecast horizon x seq_length
+    #     return torch.stack(samples)
+    
+    def sample_autoregressive_multiple(self, src, pl, num_samples=10):
+        self.train()  # keep dropout on
+
+        B, L, D = src.shape
+        total_plen = pl.shape[1]
+        horizon = 9 * (11 - 1)     # if each step adds 10 new points
+
+        # 1) Repeat into a “samples” dimension
+        src_rep = src.unsqueeze(0).expand(num_samples, B, L, D)
+        pl_rep  = pl.unsqueeze(0).expand(num_samples, B, total_plen)
+
+        # 2) Flatten samples & batch into one big batch
+        #    new batch = num_samples * B
+        big_batch = num_samples * B
+        src_flat = src_rep.reshape(big_batch, L, D)
+        pl_flat  = pl_rep.reshape(big_batch, total_plen)
+
+        # 3) Single autoregressive loop over timesteps
+        input_i = src_flat.to(self.device) 
+        outputs = []
+        for i in range(9):
+            pl_i = pl_flat[:, i*10 : (i+1)*10].to(self.device)                # (big_batch, 10)
+            out  = self.forward(input_i, pl_i)               # (big_batch, 11*D)
+            # reshape: (big_batch, 11, D) → take the last 10 → (big_batch, 10, D)
+            out = out.view(big_batch, 11, D)[:, 1:, :]
+
+            outputs.append(out)
+            # slide your window forward 10 steps
+            input_i = torch.cat([input_i[:, 10:, :], out], dim=1)
+
+        # concat all 9 blocks → (big_batch, horizon, D)
+        preds_flat = torch.cat(outputs, dim=1)
+
+        # 4) Un-flatten back to (num_samples, B, horizon, D)
+        preds = preds_flat.view(num_samples, B, horizon, D)
+        # print(f'generated {num_samples} trajectories')
+        self.eval()
+        return preds
 
 
 
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--algo-name", type=str, default="mbpo_uq")
+    parser.add_argument("--pretrained", type=bool, default=True)
+    parser.add_argument("--mode", type=str, default="offline")
+    # parser.add_argument("--task", type=str, default="walker2d-medium-replay-v2")
+    parser.add_argument("--model_path" , type=str, default="saved_models")
+    # parser.add_argument('-cuda', '--cuda_number', type=str, metavar='<device>', default=2, #required=True,
+                        # help='Specify the CUDA device number to use.')
+    parser.add_argument('-data_name', '--data_name', type=str, metavar='<size>', default='train',
+                help='which data to work on.')
+    parser.add_argument(
+                    "--devid", 
+                    type=int,
+                    default=7,
+                    help="Which GPU device index to use"
+                )
+    parser.add_argument("--iter", type=int, default=3)
 
+    parser.add_argument("--task", type=str, default="Abiomed-v0")
+    parser.add_argument("--seed", type=int, default=1)
+    parser.add_argument('--num_samples', type=int, default=50)
+
+
+    parser.add_argument("--logdir", type=str, default="log")
+    parser.add_argument("--log-freq", type=int, default=1000)
+    parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu")
+
+    #world transformer arguments
+    parser.add_argument('-seq_dim', '--seq_dim', type=int, metavar='<dim>', default=12,
+                        help='Specify the sequence dimension.')
+    parser.add_argument('-output_dim', '--output_dim', type=int, metavar='<dim>', default=11*12,
+                        help='Specify the sequence dimension.')
+    parser.add_argument('-bc', '--bc', type=int, metavar='<size>', default=64,
+                        help='Specify the batch size.') 
+    parser.add_argument('-nepochs', '--nepochs', type=int, metavar='<epochs>', default=1, #change
+                        help='Specify the number of epochs to train for.')
+    parser.add_argument('-encoder_size', '--encs', type=int, metavar='<size>', default=2,
+                help='Set the number of encoder layers.') 
+    parser.add_argument('-lr', '--lr', type=float, metavar='<size>', default=0.001,
+                        help='Specify the learning rate.')
+    parser.add_argument('-encoder_dropout', '--encoder_dropout', type=float, metavar='<size>', default=0.1,
+                help='Set the tunable dropout.')
+    parser.add_argument('-decoder_dropout', '--decoder_dropout', type=float, metavar='<size>', default=0.1,
+                help='Set the tunable dropout.')
+    parser.add_argument('-dim_model', '--dim_model', type=int, metavar='<size>', default=256,
+                help='Set the number of encoder layers.')
+    parser.add_argument('-path', '--path', type=str, metavar='<cohort>', 
+                        default='/data/abiomed_tmp/processed',
+                        help='Specify the path to read data.')
+    
+
+    args = parser.parse_args()
+    import random
+    from torch.utils.tensorboard import SummaryWriter
+    from common.logger import Logger
+    from common.util import set_device_and_logger
+
+    random.seed(args.seed)
+    np.random.seed(args.seed)
+    torch.manual_seed(args.seed)
+    if args.device != "cpu":
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
+
+    # log
+    t0 = datetime.datetime.now().strftime("%m%d_%H%M%S")
+    log_file = f'seed_{args.seed}_{t0}-{args.task.replace("-", "_")}_{args.algo_name}'
+    # log_file = 'seed_1_0413_220409-Abiomed_v0_mbpo_uq_rerun'
+    log_path = os.path.join(args.logdir, args.task, args.algo_name, log_file)
+
+    model_path = os.path.join(args.model_path, args.task, args.algo_name, log_file)
+    writer = SummaryWriter(log_path)
+    writer.add_text("args", str(args))
+    logger = Logger(writer=writer,log_path=log_path)
+    model_logger = Logger(writer=writer,log_path=model_path)
+
+    Devid = args.devid if args.device == 'cuda' else -1
+    set_device_and_logger(Devid, logger, model_logger)
+
+    world_transformer = WorldTransformer(args, logger, pretrained = False)
+    loader = world_transformer.read_data(mode='test')
+    for src, pl, tgt in loader:
+        preds = world_transformer.trained_model.sample_autoregressive_multiple(src, pl)

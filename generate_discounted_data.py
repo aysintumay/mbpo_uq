@@ -127,7 +127,7 @@ def generate_data(dataset, env, eval_episodes):
         #obs, next_obs, reward, done
 
         obs_.append(list(obs[0]))
-        next_obs_.append(list(next_obs.reshape(obs.shape)[0]))
+        next_obs_.append(list(next_state_gt.reshape(obs.shape)[0]))
         action_.append(action[0])
         full_action_.append(full_pl)
         reward_.append(reward)
@@ -179,6 +179,7 @@ if __name__ == "__main__":
     parser.add_argument("--task", type=str, default="Abiomed-v0")
     parser.add_argument("--seed", type=int, default=1)
     parser.add_argument('--num_samples', type=int, default=50)
+    parser.add_argument('--crps_scale', type=float, default=0.1)
 
 
     parser.add_argument("--logdir", type=str, default="log")
@@ -219,11 +220,11 @@ if __name__ == "__main__":
         torch.backends.cudnn.deterministic = True
         torch.backends.cudnn.benchmark = False
 
-    with open(f"/data/abiomed_tmp/intermediate_data_uambpo/discounted_trainset.pkl", "rb") as f:
-        dataset = pickle.load(f)
-    #save the eval_info
-    with open(f"/data/abiomed_tmp/intermediate_data_uambpo/eval_info_trainset.pkl", "rb") as f:
-        eval_info =pickle.load(f)
+    # with open(f"/data/abiomed_tmp/intermediate_data_uambpo/discounted_trainset.pkl", "rb") as f:
+    #     dataset = pickle.load(f)
+    # #save the eval_info
+    # with open(f"/data/abiomed_tmp/intermediate_data_uambpo/eval_info_trainset.pkl", "rb") as f:
+    #     eval_info =pickle.load(f)
 
     # log
     t0 = datetime.datetime.now().strftime("%m%d_%H%M%S")
