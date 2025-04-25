@@ -72,8 +72,19 @@ class StandardNormalizer(object):
 
         Returns: (np.array) The transformed dataset.
         """
-        if isinstance(self.mean, torch.Tensor):
-            return (data - self.mean) / torch.sqrt(self.var)
-        elif isinstance(self.mean, np.ndarray):
-            return (data - self.mean) / np.sqrt(self.var)
-        
+        if self.mean is None or self.var is None:
+            return data
+        if isinstance(data, torch.Tensor):
+            return (data - torch.tensor(self.mean).to(data.device)) / torch.sqrt(torch.tensor(self.var).to(data.device))
+        elif isinstance(data, np.ndarray):
+            return (data - np.array(self.mean)) / np.sqrt(np.array(self.var))
+
+    def inverse_transform(self, data):
+        return data
+        if self.mean is None or self.var is None:
+            return data
+        if isinstance(data, torch.Tensor):
+            return data * torch.sqrt(torch.tensor(self.var).to(data.device)) + torch.tensor(self.mean).to(data.device)
+        elif isinstance(data, np.ndarray):
+            return data * np.sqrt(np.array(self.var)) + np.array(self.mean)
+
