@@ -19,6 +19,9 @@ def set_global_seed(seed):
     torch.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
 
+def set_global_device(dev):
+    global device
+    device = torch.device(dev)
 
 def set_device_and_logger(gpu_id, logger_ent, logger_mod):
     global device, logger, logger_model
