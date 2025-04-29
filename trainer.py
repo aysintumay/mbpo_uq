@@ -134,7 +134,7 @@ class Trainer:
                     num_timesteps += 1
                     t.update(1)
             # evaluate current policy
-            if e % 10 == 0:
+            if e % 50 == 0:
                 if self.eval_env.id == 'Abiomed-v0':
                     eval_info, _ = self.evaluate()
                     ep_reward_mean, ep_reward_std = np.mean(eval_info["eval/episode_reward"]), np.std(eval_info["eval/episode_reward"])
@@ -153,7 +153,7 @@ class Trainer:
                                     episode_1_off_accuracy: {ep_1_off_accuracy_mean:.3f} ± {ep_1_off_accuracy_std:.3f}"
                                     )
                 else:
-                    eval_info = self._evaluate()
+                    eval_info,_ = self._evaluate()
                     
                     ep_reward_mean, ep_reward_std = np.mean(eval_info["eval/episode_reward"]), np.std(eval_info["eval/episode_reward"])
                     ep_length_mean, ep_length_std = np.mean(eval_info["eval/episode_length"]), np.std(eval_info["eval/episode_length"])
@@ -196,16 +196,30 @@ class Trainer:
         
 
 
-    def _evaluate(self):
+    def _evaluate(self, world_model):
+
+        #TODO: in progress
         self.algo.policy.eval()
         obs = self.eval_env.reset()
         eval_ep_info_buffer = []
         num_episodes = 0
         episode_reward, episode_length = 0, 0
-
+        obs_ = []
+        next_obs_ = []
+        action_ = []
+        full_action_ = []
+        reward_ = []
+        terminal_ = []
         while num_episodes < self._eval_episodes:
             action = self.algo.policy.sample_action(obs, deterministic=True)
-            next_obs, reward, terminal, _ = self.eval_env.step(action)
+            next_obs, reward, terminal, _ = self.eval_env.step(action) #d4rl env
+            #predict next_obs
+
+            next_obs_mult = world_model.predict_multiple(obs, action)
+            #calculate std over next_obs_mult
+            std = (next_obs_mult.std(axis=0)).mean().item()
+            penalized_reward = reward - self.eval_env.crps_scale * std
+
             episode_reward += reward
             episode_length += 1
 
@@ -218,22 +232,32 @@ class Trainer:
                 num_episodes +=1
                 episode_reward, episode_length = 0, 0
                 obs = self.eval_env.reset()
-        
+            obs_.append(list(obs[0]))
+            next_obs_.append(list(next_obs.reshape(obs.shape)[0]))
+            action_.append(action)
+            reward_.append(penalized_reward)
+            terminal_.append(terminal)
+        dataset = {
+                'observations': np.array(obs_),
+                'actions': np.array(action_),  # Reshape to ensure it's 2D
+                'rewards': np.array(reward_),
+                'terminals': np.array(terminal_),
+                'next_observations': np.array(next_obs_),
+            }
         return {
             "eval/episode_reward": [ep_info["episode_reward"] for ep_info in eval_ep_info_buffer],
             "eval/episode_length": [ep_info["episode_length"] for ep_info in eval_ep_info_buffer]
-        }
+        },dataset
 
 
     def evaluate(self):
         self.algo.policy.eval()
-        obs = self.eval_env.reset()
+        obs = self.eval_env.reset().reshape(1,-1)
         
         eval_ep_info_buffer = []
         num_episodes = 0
         episode_reward, episode_length = 0, 0
-        acc_total = 0
-        acc_1_off_total = 0
+        
         crps_list = []
         obs_ = []
         next_obs_ = []
@@ -241,14 +265,15 @@ class Trainer:
         full_action_ = []
         reward_ = []
         terminal_ = []
+        raw_reward_ = []
         terminal_counter = 0
         N = self.eval_env.data['observations'].shape[0]
 
         indx = np.random.choice(N,
                                 size=self._eval_episodes,
                                 replace=False)
-
-        for i in tqdm(indx):
+        
+        for i in tqdm(range(indx.shape[0])):
             start_time = time.time()
             act = self.eval_env.get_pl()
            
@@ -257,15 +282,14 @@ class Trainer:
             action = action.repeat(90) #repeat the action for 90 steps
 
             full_pl = self.eval_env.get_full_pl()
-            next_obs, reward, terminal, info = self.eval_env.step(action) #next state predictions
-
+            next_obs, reward, terminal, info = self.eval_env.step_std(action) #next state predictions
+            rwd_rewards = self.eval_env.compute_reward(next_obs) #dropout not enabled prediction
+            next_obs = self.eval_env.normalize(next_obs, idx=np.arange(0,12))
             #MSE of next_obs and next_state_gt
             mse = np.mean((next_obs.reshape(-1,1) - next_state_gt)**2)*self.eval_env.rwd_stds[12]
 
-            
-
             #obs: (0,90) next_state_gt:(90,180) next_obs: (90,180), action: (90,180) act: (90,180)
-            crps_list.extend(info['crps'])
+            # crps_list.extend(info['crps'])
             episode_reward += reward
             episode_length += 1
 
@@ -274,16 +298,16 @@ class Trainer:
             # acc_total += acc
             # acc_1_off_total += acc_1_off
 
-            if i == self.eval_env.data['observations'].shape[0]-1:
+            if i == indx.shape[0]-1:
                 self.plot_predictions_rl(obs.reshape(1,90,12), next_state_gt.reshape(1,90,12), next_obs.reshape(1,90,12), action.reshape(1,90), full_pl.reshape(1,90), num_episodes)
             
-            obs = self.eval_env.get_obs().reshape(1,-1)
+            
             if terminal_counter == self.terminal_counter:
 
                 eval_ep_info_buffer.append(
                     {"episode_reward": episode_reward,
                       "episode_length": episode_length,
-                        "episode_accurcy": acc, 
+                        "episode_accuracy": acc, 
                         "episode_1_off_accuracy": acc_1_off,
                         'mse': mse,
                         }
@@ -291,20 +315,29 @@ class Trainer:
                 num_episodes +=1
                 terminal_counter = 0
                 episode_reward, episode_length = 0, 0
-                obs = self.eval_env.reset()
-                # print("episode_reward", episode_reward, 
-                #   "episode_length", episode_length,
-                #   "episode_accuracy", acc_total/self._step_per_epoch, 
-                #   "episode_1_off_accuracy", acc_1_off_total/self._step_per_epoch)
+                
                 # self.logger.print("EVAL TIME: {:.3f}s".format(time.time() - start_time))
             #obs, next_obs, reward, done
 
-            obs_.append(obs)
-            next_obs_.append(next_obs.reshape(obs.shape))
-            action_.append(action)
+            obs_.append(list(obs[0]))
+            next_obs_.append(list(next_obs.reshape(obs.shape)[0]))
+            action_.append(action[0])
             full_action_.append(full_pl)
             reward_.append(reward)
             terminal_.append(terminal)
+
+            raw_reward_.append(rwd_rewards)
+            if num_episodes != self.eval_env.data['observations'].shape[0]:
+                obs = self.eval_env.get_obs().reshape(1,-1)
+            else:
+                break
+        
+        #rewards withput std penalty using D_1
+        with open('/data/abiomed_tmp/intermediate_data_uambpo/raw_rewards_1', 'wb') as f:
+            np.save(f, np.array(raw_reward_))
+        #rewards with penalty using D_1
+        with open('/data/abiomed_tmp/intermediate_data_uambpo/rewards_1', 'wb') as f:
+            np.save(f, np.array(reward_))
 
         #need actions to be unnormalized for plotting
         action_ = self.eval_env.unnormalize(np.array(action_), idx=12)
@@ -321,7 +354,7 @@ class Trainer:
         return {
             "eval/episode_reward": [ep_info["episode_reward"] for ep_info in eval_ep_info_buffer],
             "eval/episode_length": [ep_info["episode_length"] for ep_info in eval_ep_info_buffer],
-            "eval/episode_accuracy": [ep_info["episode_accurcy"] for ep_info in eval_ep_info_buffer],
+            "eval/episode_accuracy": [ep_info["episode_accuracy"] for ep_info in eval_ep_info_buffer],
             "eval/episode_1_off_accuracy": [ep_info["episode_1_off_accuracy"] for ep_info in eval_ep_info_buffer],
             "eval/mse": [ep_info["mse"] for ep_info in eval_ep_info_buffer],
         }, dataset

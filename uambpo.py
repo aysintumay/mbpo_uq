@@ -59,24 +59,34 @@ def main(args):
 
     results = []
 
-    for i in np.arange(0,3):
+    for i in np.arange(args.iter):
         start_time = time.time()
         print(f"====================Iteration {i+1}====================")
         if i == 0:
-            
-            offline_buffer_train = None
-            offline_buffer_test = None
-            norm_info = {'rwd_stds': None, 'rwd_means':None, 'scaler': None}
         
-        #offline buffer_load
-       
-        # with open(os.path.join('intermediate_data',f'dataset_train_0.pkl'), 'rb') as f:
-        #     offline_buffer_train = pickle.load(f)
-        # with open(os.path.join('intermediate_data',f'dataset_test_0.pkl'), 'rb') as f:
-        #     offline_buffer_test = pickle.load(f)
+            with open(f'/data/abiomed_tmp/intermediate_data_uambpo/discounted_trainset.pkl', 'rb') as f:
+                offline_buffer_train = pickle.load(f)
+            with open('/data/abiomed_tmp/intermediate_data_uambpo/discounted_trainset.pkl', 'rb') as f:
+                offline_buffer_test = pickle.load(f)
+        
+            stds = np.array([1.2599670e+01, 4.6925778e+02, 5.8842087e+01, 1.5025043e+01,
+        1.5730153e+01, 2.3981575e+01, 1.2024239e+01, 2.2280893e+01,
+        1.7170943e+02, 1.7599674e+01, 1.9673981e-01, 1.4662008e+01,
+        2.1159306e+00])
+            
+            means = np.array([7.3452431e+01, 3.9981541e+03, 2.8203378e+02, 3.9766106e+01,
+        1.0223494e+01, 9.2290756e+01, 6.1786270e+01, 3.2400185e+01,
+        6.0808063e+02, 8.4936722e+01, 6.1181599e-01, 6.5555145e+01,
+        6.0715165e+00])
+        
+            norm_info = {'rwd_stds':stds, 'rwd_means':means, 'scaler': None}
 
-        args.pretrained = False
+        os.makedirs(model_logger.log_path, exist_ok=True)
+
+        args.pretrained = True
         args.data_name = 'train'  
+
+        args.crps_scale = 1
         # args.eval_episodes = 7 #1000 
     
         #train on offline dataset or replayed dataset
@@ -89,12 +99,13 @@ def main(args):
         
         os.makedirs(model_path, exist_ok=True)
         #save policy
-        torch.save(policy.state_dict(), os.path.join(model_path, f"policy_{args.task}_{i}.pth"))
+        torch.save(policy.state_dict(), os.path.join(model_path, f"policy_v_1_{args.task}_{i}.pth"))
         # policy.to(util.device)
         #save transition model
         trainer.algo.save_dynamics_model(f"dynamics_model_{i}")
         
-
+        if i == args.iter-1:
+            args.crps_scale = None
         # args.policy_path = os.path.join(log_path, f"policy_{args.task}.pth")
 
         trainer._eval_episodes = 49939
@@ -110,7 +121,7 @@ def main(args):
         #save the dataset
         if not os.path.exists('/data/abiomed_tmp/intermediate_data_uambpo'):
             os.makedirs('/data/abiomed_tmp/intermediate_data_uambpo')
-        with open(os.path.join('/data/abiomed_tmp/intermediate_data_uambpo',f'dataset_train_{i+1}.pkl'), 'wb') as f:
+        with open(os.path.join('/data/abiomed_tmp/intermediate_data_uambpo',f'dataset_train_v_{i+1}.pkl'), 'wb') as f:
             pickle.dump(dataset_train, f)
 
         #get renewed test dataset of 20k
@@ -122,7 +133,7 @@ def main(args):
 
         dataset_test, eval_info = test(i, args,model_logger,norm_info, policy, trainer, offline_buffer_test if offline_buffer_test is not None else None, log_path)
         #save the dataset
-        with open(os.path.join('/data/abiomed_tmp/intermediate_data_uambpo',f'dataset_test_{i+1}.pkl'), 'wb') as f:
+        with open(os.path.join('/data/abiomed_tmp/intermediate_data_uambpo',f'dataset_test_v_{i+1}.pkl'), 'wb') as f:
             pickle.dump(dataset_test, f)
 
         offline_buffer_train = dataset_train
@@ -178,7 +189,7 @@ def main(args):
             "seed": args.seed
         })        
         print(f"Iteration {i} - Seed {args.seed} - Mean Return: {mean_return:.2f} ± {std_return:.2f}")
-        print('Iteration', i, 'time:', time_total)  
+        print('Iteration', i, 'time:', time_total)
 
     os.makedirs(os.path.join('results', args.task, 'uambpo'), exist_ok=True)
     results_df = pd.DataFrame(results)
@@ -186,7 +197,9 @@ def main(args):
     results_df.to_csv(results_path, index=False)
     print(f"Results saved to {results_path}")
    
-        
+
+
+
 def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--algo-name", type=str, default="mbpo_uq")
@@ -202,7 +215,7 @@ def get_args():
     parser.add_argument(
                     "--devid", 
                     type=int,
-                    default=7,
+                    default=0,
                     help="Which GPU device index to use"
                 )
     parser.add_argument("--iter", type=int, default=3)
@@ -224,7 +237,7 @@ def get_args():
     parser.add_argument("--n-ensembles", type=int, default=7)
     parser.add_argument("--n-elites", type=int, default=5)
     parser.add_argument("--reward-penalty-coef", type=float, default=1) #1e=6
-    parser.add_argument("--rollout-length", type=int, default=5) #1 
+    parser.add_argument("--rollout-length", type=int, default=3) #1 
     parser.add_argument("--rollout-batch-size", type=int, default=5000) #50000
     parser.add_argument("--rollout-freq", type=int, default=1000)
     parser.add_argument("--model-retain-epochs", type=int, default=5)
@@ -232,6 +245,9 @@ def get_args():
     parser.add_argument("--dynamics-model-dir", type=str, default=None)
 
     parser.add_argument('--num_samples', type=int, default=50)
+    parser.add_argument('--crps_scale', type=float, default=None)
+    # parser.add_argument('--iterations', type=int, default=4)
+
 
     parser.add_argument("--epoch", type=int, default=50) #1000 #change
     parser.add_argument("--step-per-epoch", type=int, default=1000) # will be equated to #of samples in train and test #change
@@ -272,21 +288,6 @@ def get_args():
          default='log', help='root dir'
     )
    
-    parser.add_argument(
-        '--algos', default="mopo", help='algos'
-    )
-    
-    parser.add_argument(
-        '--xlabel', default='Timesteps', help='matplotlib figure xlabel'
-    )
-    parser.add_argument(
-        '--ylabel', default='episode_reward', help='matplotlib figure ylabel'
-    )
-
-    parser.add_argument(
-        '--ylabel2', default='episode_accuracy', help='matplotlib figure ylabel'
-    )
-
     args = parser.parse_args()
 
     return args

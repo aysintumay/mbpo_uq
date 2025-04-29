@@ -22,7 +22,7 @@ logger.setLevel(logging.DEBUG)
 
 
 class WorldTransformer:
-    def __init__(self, args, logger, pretrained = True):
+    def __init__(self, args, logger, pretrained = True, dataset = None, stds=None, means=None):
         super(WorldTransformer, self).__init__()
 
         self.path = getattr(args, 'path', '/data/abiomed_tmp/processed')
@@ -49,14 +49,15 @@ class WorldTransformer:
         # self.train_loader = self.read_data('train')
         # self.test_loader = self.read_data(mode = 'test') 
         self.model_save_dir = util.logger_model.log_path
-        if args.data_name == 'train':   
-            self.train_loader = self.read_data('train')
-        else:
-            self.test_loader = self.read_data('test')
+       
         if pretrained:
             self.trained_model = self.load_model()
             print('loaded model')
         else:
+            if args.data_name == 'train':   
+                self.train_loader = self.read_data('train', dataset, stds, means)
+            else:
+                self.test_loader = self.read_data('test', dataset, stds, means)
             self.trained_model = self.train_model()
             print('trained model')
         self.rwd_mean = None
@@ -96,24 +97,29 @@ class WorldTransformer:
         return self.model
 
 
-    def read_data(self, mode='train'):
-
+    def read_data(self, mode='train', dataset=None, stds=None, means=None):
+        
         dta = torch.load(os.path.join(self.path, 'pp_train_amicgs.pt')).numpy()
         dta = dta[: ,:, :-1]
         self.rwd_mean = dta.mean(axis=(0, 1))
         self.rwd_std = dta.std(axis=(0, 1))
-        horizon = int(self.args.output_dim/self.seq_dim-1)
+        horizon = int(self.output_dim/self.seq_dim-1)
         if mode == 'test':
             dta = torch.load(os.path.join(self.path, 'pp_test_amicgs.pt')).numpy()
             dta = dta[: ,:, :-1]
             horizon = 90
 
         x_n = (dta - self.rwd_mean) / self.rwd_std
+
+        # if dataset:
+        #     dta[:,:,-1] = (dataset['actions'].repeat(180).reshape(-1,90) - means[-1])/ stds[-1]
+        #     dta[:,90:,:-1] = dataset['next_observations'].reshape(-1,90,12)
+    
         x, pl, y = self.prep_transformer_world(x_n, ts= horizon+1, dims = 12)
         print("plshape is ", pl.shape)
         pl = pl[..., :horizon]
         dataset = TimeSeriesDataset(x, pl, y)
-        loader = DataLoader(dataset, batch_size=self.args.bc, shuffle=True)
+        loader = DataLoader(dataset, batch_size=self.bc, shuffle=True)
         return loader
 
     def resize(self, obs, action, next_state):
@@ -130,7 +136,7 @@ class WorldTransformer:
         # Load the model state dict
    
         # self.model.load_state_dict(torch.load(os.path.join(self.logger.writer.get_logdir(), f"checkpoint_epoch_{self.args.epoch}.pth")))
-        self.model.load_state_dict(torch.load(os.path.join('/data/models/world_model', f"checkpoint_epoch_{self.args.task}_{self.nepochs}.pth")))
+        self.model.load_state_dict(torch.load(os.path.join('/data/models/world_model', f"checkpoint_epoch_v_1_{self.args.task}_{self.nepochs}.pth")))
         return self.model.to(self.device)
     
     def predict(self, obs_loader):
@@ -406,6 +412,25 @@ if __name__ == "__main__":
     set_device_and_logger(Devid, logger, model_logger)
 
     world_transformer = WorldTransformer(args, logger, pretrained = False)
-    loader = world_transformer.read_data(mode='test')
-    for src, pl, tgt in loader:
-        preds = world_transformer.trained_model.sample_autoregressive_multiple(src, pl)
+
+    with open(f'/data/abiomed_tmp/intermediate_data_uambpo/discounted_trainset.pkl', 'rb') as f:
+        offline_buffer_train = pickle.load(f)
+    with open('/data/abiomed_tmp/intermediate_data_uambpo/discounted_trainset.pkl', 'rb') as f:
+        offline_buffer_test = pickle.load(f)
+
+    stds = np.array([1.2599670e+01, 4.6925778e+02, 5.8842087e+01, 1.5025043e+01,
+    1.5730153e+01, 2.3981575e+01, 1.2024239e+01, 2.2280893e+01,
+    1.7170943e+02, 1.7599674e+01, 1.9673981e-01, 1.4662008e+01,
+    2.1159306e+00])
+    
+    means = np.array([7.3452431e+01, 3.9981541e+03, 2.8203378e+02, 3.9766106e+01,
+    1.0223494e+01, 9.2290756e+01, 6.1786270e+01, 3.2400185e+01,
+    6.0808063e+02, 8.4936722e+01, 6.1181599e-01, 6.5555145e+01,
+    6.0715165e+00])
+    
+    norm_info = {'rwd_stds':stds, 'rwd_means':means, 'scaler': None}
+
+
+    # loader = world_transformer.read_data(mode='test')
+    # for src, pl, tgt in loader:
+    #     preds = world_transformer.trained_model.sample_autoregressive_multiple(src, pl)

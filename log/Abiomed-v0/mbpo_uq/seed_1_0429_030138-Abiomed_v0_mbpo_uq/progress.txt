@@ -1,0 +1,105 @@
+Start training dynamics
+loss/model_eval_mse_loss: 0.136070
+loss/model_eval_mse_loss: 0.133725
+loss/model_eval_mse_loss: 0.131831
+loss/model_eval_mse_loss: 0.129260
+loss/model_eval_mse_loss: 0.126549
+loss/model_eval_mse_loss: 0.127296
+loss/model_eval_mse_loss: 0.124261
+loss/model_eval_mse_loss: 0.125209
+loss/model_eval_mse_loss: 0.127643
+loss/model_eval_mse_loss: 0.122551
+loss/model_eval_mse_loss: 0.122051
+loss/model_eval_mse_loss: 0.124058
+loss/model_eval_mse_loss: 0.120473
+loss/model_eval_mse_loss: 0.122290
+loss/model_eval_mse_loss: 0.121389
+loss/model_eval_mse_loss: 0.120309
+loss/model_eval_mse_loss: 0.119114
+loss/model_eval_mse_loss: 0.119799
+loss/model_eval_mse_loss: 0.121682
+loss/model_eval_mse_loss: 0.119483
+loss/model_eval_mse_loss: 0.120010
+loss/model_eval_mse_loss: 0.118860
+loss/model_eval_mse_loss: 0.119719
+loss/model_eval_mse_loss: 0.119952
+loss/model_eval_mse_loss: 0.120130
+loss/model_eval_mse_loss: 0.118995
+loss/model_eval_mse_loss: 0.118681
+loss/model_eval_mse_loss: 0.118687
+loss/model_eval_mse_loss: 0.118505
+loss/model_eval_mse_loss: 0.120096
+loss/model_eval_mse_loss: 0.120202
+loss/model_eval_mse_loss: 0.120060
+loss/model_eval_mse_loss: 0.118829
+loss/model_eval_mse_loss: 0.122157
+loss/model_eval_mse_loss: 0.120473
+loss/model_eval_mse_loss: 0.121326
+loss/model_eval_mse_loss: 0.130018
+loss/model_eval_mse_loss: 0.122813
+loss/model_eval_mse_loss: 0.124510
+loss/model_eval_mse_loss: 0.128230
+total time: 79.519s
+Epoch #50: episode_accuracy: 0.000 ± 0.008,                                    episode_1_off_accuracy: 0.016 ± 0.119
+Epoch #50: episode_reward: -18.743 ± 0.979,                                episode_length: 1.000 ± 0.000
+total time: 578.621s
+Start training dynamics
+loss/model_eval_mse_loss: 0.136031
+loss/model_eval_mse_loss: 0.129817
+loss/model_eval_mse_loss: 0.125767
+loss/model_eval_mse_loss: 0.125304
+loss/model_eval_mse_loss: 0.126285
+loss/model_eval_mse_loss: 0.125945
+loss/model_eval_mse_loss: 0.123444
+loss/model_eval_mse_loss: 0.122466
+loss/model_eval_mse_loss: 0.125188
+loss/model_eval_mse_loss: 0.121728
+loss/model_eval_mse_loss: 0.123766
+loss/model_eval_mse_loss: 0.122338
+loss/model_eval_mse_loss: 0.130148
+loss/model_eval_mse_loss: 0.121712
+loss/model_eval_mse_loss: 0.125000
+loss/model_eval_mse_loss: 0.120901
+loss/model_eval_mse_loss: 0.120004
+loss/model_eval_mse_loss: 0.120154
+loss/model_eval_mse_loss: 0.121691
+loss/model_eval_mse_loss: 0.122594
+loss/model_eval_mse_loss: 0.121628
+loss/model_eval_mse_loss: 0.121005
+loss/model_eval_mse_loss: 0.121123
+total time: 61.274s
+Epoch #50: episode_accuracy: 0.125 ± 0.331,                                    episode_1_off_accuracy: 0.233 ± 0.420
+Epoch #50: episode_reward: -18.692 ± 0.956,                                episode_length: 1.000 ± 0.000
+total time: 592.375s
+Start training dynamics
+loss/model_eval_mse_loss: 0.136048
+loss/model_eval_mse_loss: 0.133298
+loss/model_eval_mse_loss: 0.129305
+loss/model_eval_mse_loss: 0.127338
+loss/model_eval_mse_loss: 0.129745
+loss/model_eval_mse_loss: 0.126042
+loss/model_eval_mse_loss: 0.126384
+loss/model_eval_mse_loss: 0.128388
+loss/model_eval_mse_loss: 0.123071
+loss/model_eval_mse_loss: 0.124261
+loss/model_eval_mse_loss: 0.122281
+loss/model_eval_mse_loss: 0.121368
+loss/model_eval_mse_loss: 0.122373
+loss/model_eval_mse_loss: 0.122266
+loss/model_eval_mse_loss: 0.120473
+loss/model_eval_mse_loss: 0.122219
+loss/model_eval_mse_loss: 0.119818
+loss/model_eval_mse_loss: 0.120176
+loss/model_eval_mse_loss: 0.119844
+loss/model_eval_mse_loss: 0.119346
+loss/model_eval_mse_loss: 0.120625
+loss/model_eval_mse_loss: 0.119665
+loss/model_eval_mse_loss: 0.120039
+loss/model_eval_mse_loss: 0.119336
+loss/model_eval_mse_loss: 0.120310
+loss/model_eval_mse_loss: 0.119222
+loss/model_eval_mse_loss: 0.119667
+total time: 63.409s
+Epoch #50: episode_accuracy: 0.006 ± 0.076,                                    episode_1_off_accuracy: 0.027 ± 0.158
+Epoch #50: episode_reward: -18.728 ± 0.975,                                episode_length: 1.000 ± 0.000
+total time: 586.947s

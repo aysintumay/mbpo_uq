@@ -31,7 +31,7 @@ class AbiomedEnv(gym.Env):
         self.rwd_stds = scaler_info['rwd_stds'] if scaler_info['rwd_stds'] is not None else None
         self.scaler = scaler_info['scaler'] if scaler_info['scaler'] else None
 
-        self.world_model = WorldTransformer(args = self.args, logger = self.logger, pretrained = self.pretrained)
+        self.world_model = WorldTransformer(args = self.args, logger = self.logger, pretrained = self.pretrained, dataset = offline_buffer, stds = self.rwd_stds, means= self.rwd_means)
         # self.trained_world_model = self.world_model.load_model()
         self.data = self.qlearning_dataset()
         self.current_index = 0
@@ -200,10 +200,9 @@ class AbiomedEnv(gym.Env):
         else:
             return dataset
            
-        
 
-    
-    def step(self, action):
+
+    def step_crps(self, action):
         """Run one timestep of the environment's dynamics. When end of
         episode is reached, you are responsible for calling `reset()`
         to reset this environment's state.
@@ -221,29 +220,83 @@ class AbiomedEnv(gym.Env):
         """
 
 
+        obs = self.data['observations'][self.current_index]
+        next_state = self.data['next_observations'][self.current_index]
+            
+        dataloder = self.world_model.resize(obs, action, next_state)
+        # next_obs = self.world_model.predict(dataloder)
+        num_samples = self.args.num_samples
+        output_mult = self.world_model.trained_model.sample_autoregressive_multiple(torch.Tensor(obs.reshape(-1, 90, self.args.seq_dim)).to(util.device), torch.Tensor(action.reshape(1,-1)).to(util.device), num_samples=num_samples,)
+        # next_obs_unnorm = self.unnormalize(next_obs, np.arange(0,12))
+        # output_mult = output_mult.detach().cpu().numpy()
+        # # for i in range(num_samples):
+        output_mult_unnorm = self.unnormalize(output_mult.detach().cpu(), np.arange(0,12))
+        # #get rewards
+        next_state = self.unnormalize(next_state.reshape(1, 90, self.args.seq_dim), np.arange(0,12))
+        reward, crps = self.get_reward_crps(output_mult_unnorm, next_state)
+
+        next_obs = output_mult.mean(axis =0).detach().cpu() #mean of the probabilistic forecasts
+        # reward = self.compute_reward(next_obs_unnorm)
+        #unnormalize
+        done = self.check_terminal_condition()
+        info = {'crps': crps}
+        # info = {}
+        self.current_index += 1
+        return next_obs, reward, done, info
+
+    def step(self, action):
+
         
         obs = self.data['observations'][self.current_index]
         next_state = self.data['next_observations'][self.current_index]
             
         dataloder = self.world_model.resize(obs, action, next_state)
         next_obs = self.world_model.predict(dataloder)
-        num_samples = self.args.num_samples
-        output_mult = self.world_model.trained_model.sample_autoregressive_multiple(torch.Tensor(obs.reshape(-1, 90, self.args.seq_dim)).to(util.device), torch.Tensor(action.reshape(1,-1)).to(util.device), num_samples=num_samples,)
-        # output_mult_all.append(output_mult)
+        # next_state = self.unnormalize(next_state.reshape(1, 90, self.args.seq_dim), np.arange(0,12))
         next_obs_unnorm = self.unnormalize(next_obs, np.arange(0,12))
-        output_mult = output_mult.detach().cpu().numpy()
-        # for i in range(num_samples):
-        output_mult = self.unnormalize(output_mult, np.arange(0,12))
-        #get rewards
-        next_state = self.unnormalize(next_state.reshape(1, 90, self.args.seq_dim), np.arange(0,12))
-        reward, crps = self.get_reward_crps(next_obs_unnorm, output_mult, next_state)
-
-        # reward = self.compute_reward(next_obs_unnorm)
-        #unnormalize
+        reward = self.compute_reward(next_obs_unnorm)
         done = self.check_terminal_condition()
-        info = {'crps': crps}
+        info = {}
         self.current_index += 1
         return next_obs, reward, done, info
+    
+
+    def step_std(self, action):
+
+        
+        obs = self.data['observations'][self.current_index]
+        next_state = self.data['next_observations'][self.current_index]
+            
+        dataloder = self.world_model.resize(obs, action, next_state)
+        next_obs = self.world_model.predict(dataloder)
+        next_obs_unnorm = self.unnormalize(next_obs, np.arange(0,12))
+        if self.crps_scale is not None:
+            
+            num_samples = self.args.num_samples
+            output_mult = self.world_model.trained_model.sample_autoregressive_multiple(torch.Tensor(obs.reshape(-1, 90, self.args.seq_dim)).to(util.device), torch.Tensor(action.reshape(1,-1)).to(util.device), num_samples=num_samples,)
+            
+            # output_mult = output_mult.detach().cpu().numpy()
+            output_mult_unnorm = self.unnormalize(output_mult.detach().cpu(), np.arange(0,12))
+            # #get rewards
+            next_state = self.unnormalize(next_state.reshape(1, 90, self.args.seq_dim), np.arange(0,12))
+            std, reward = self.get_reward_std(output_mult_unnorm)
+            info = {'std': std}
+        else:
+            reward = self.compute_reward(next_obs_unnorm)
+            info = {}
+        # CHANGE
+        # next_obs = output_mult.mean(axis = 0) #mean of the probabilistic forecasts
+
+        #unnormalize
+        done = self.check_terminal_condition()
+        self.current_index += 1
+        return next_obs_unnorm, reward, done, info
+    
+
+    def get_reward_std(self, mult):
+        std = (mult[:,:,:,0].std(axis = 0)).mean().item() #make sure it returns one scalar
+        reward = self.compute_reward(np.array(mult[:,:,:,:]).mean(axis = 0), std)
+        return std, reward
     
 
     def compute_reward(self, data, crps=None, map_dim = 0, pulsat_dim = 7, hr_dim=9, lvedp_dim=4):
@@ -304,12 +357,13 @@ class AbiomedEnv(gym.Env):
             score+=3
         else: score+=5 # cpo <=0.5
         """
-        if crps:
+        if crps: #turn off penalty at the last iteration
             final_reward = - score - self.crps_scale * crps
         else:
             final_reward = - score
         
         return final_reward
+    
     
 
     def reset(self):
@@ -368,7 +422,7 @@ class AbiomedEnv(gym.Env):
         return -score
 
 
-    def get_reward_crps(self, data, mult_pred, target):
+    def get_reward_crps(self, mult_pred, target):
         
         '''
         data: next state prediction ground truth (1,90,12)
@@ -383,11 +437,11 @@ class AbiomedEnv(gym.Env):
         # map_only = []
         # crps_ts = []
 
-        for i in range(data.shape[0]):
-            crps = scoring.crps_evaluation(np.array(mult_pred[:,i,:,0]), np.array(target[i,:,0]))
+        # for i in range(mult_pred.shape[0]):
+        crps = scoring.crps_evaluation(np.array(mult_pred[:,:,:,0]), np.array(target[:,:,0]))
             # crps_ts.extend(crps)
             # un = scoring.unnorm_all(data[i], self.rwd_stds, self.rwd_means)
-            r1 = self.compute_reward(np.array(data[i]), crps.mean())
+        r1 = self.compute_reward(np.array(mult_pred[:,:,:,:]).mean(axis = 0), crps)
             # rewards.append(r1)
             # cum_rewards = np.mean(rewards)
         return r1, crps 

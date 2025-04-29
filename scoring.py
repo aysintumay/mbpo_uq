@@ -74,7 +74,7 @@ def crps_evaluation(samples, y_true):
     Calculate pointwise CRPS
     """
     e_x_y = np.mean(np.abs(samples - y_true), axis=0)
-    e_x_x_prime = np.mean([np.abs(si - sj) for i, si in enumerate(samples) for j, sj in enumerate(samples) if i != j])
+    e_x_x_prime = np.array([np.abs(si - sj) for i, si in enumerate(samples) for j, sj in enumerate(samples) if i != j]).mean(axis = 0)
     crps = e_x_y - 0.5 * e_x_x_prime
     crps_ed = crps
 
@@ -87,7 +87,7 @@ def crps_evaluation(samples, y_true):
     # crps_ed = ps.crps_gaussian(samples, 
     #                        mean_ed_2,  
     #                        std_ed_2).mean()
-    return crps_ed
+    return mean_crps
 
 def get_returns(log_path, i):
 

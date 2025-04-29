@@ -110,8 +110,8 @@ def train(i, logger, run, model_logger, args, scaler_info, offline_buffer = None
         # dataset = env.qlearning_dataset()
         dataset = env.data
         #save trained world model
-        trained_w_m = env.world_model.trained_model
-        torch.save(trained_w_m, os.path.join(model_logger.log_path, f'world_model_{i}.pth'))
+        # trained_w_m = env.world_model.trained_model
+        # torch.save(trained_w_m, os.path.join(model_logger.log_path, f'world_model_{i}.pth'))
     else:
         env = gym.make(args.task)
 
@@ -194,22 +194,22 @@ def train(i, logger, run, model_logger, args, scaler_info, offline_buffer = None
     
 
 
-    if offline_buffer is None:
-        # load offline buffer
-        # create buffer
+    # if offline_buffer is None:
+    #     # load offline buffer
+    #     # create buffer
         
-        # DICTpolicy = torch.load('/home/ubuntu/mbpo_uq/saved_models/Abiomed-v0/mbpo_uq/seed_1_0413_044602-Abiomed_v0_mbpo_uq/policy_Abiomed-v0.pth')
-        # sac_policy.load_state_dict(DICTpolicy)
-        print('Policy to be trained!')
-        sac_policy = sac_policy
+    #     # DICTpolicy = torch.load('/home/ubuntu/mbpo_uq/saved_models/Abiomed-v0/mbpo_uq/seed_1_0413_044602-Abiomed_v0_mbpo_uq/policy_Abiomed-v0.pth')
+    #     # sac_policy.load_state_dict(DICTpolicy)
+    print('Policy to be trained!')
+    sac_policy = sac_policy
         
-    else:
-        # load offline buffer
+    # else:
+    #     # load offline buffer
         
-        policy_state_dict = torch.load(os.path.join(model_logger.log_path, f'policy_{args.task}.pth'))
-        sac_policy.load_state_dict(policy_state_dict)
-        sac_policy.to(util.device)
-        print(f'Policy loaded from {model_logger.log_path}!')
+    #     policy_state_dict = torch.load(os.path.join(model_logger.log_path, f'policy_{args.task}.pth'))
+    #     sac_policy.load_state_dict(policy_state_dict)
+    #     sac_policy.to(util.device)
+    #     print(f'Policy loaded from {model_logger.log_path}!')
 
       
 

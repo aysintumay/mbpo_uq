@@ -80,7 +80,6 @@ def generate_data(dataset, env, eval_episodes):
     full_action_ = []
     reward_ = []
     terminal_ = []
-    terminal_counter = 0
     N = dataset['observations'].shape[0]
 
     indx = np.random.choice(N,
@@ -93,18 +92,16 @@ def generate_data(dataset, env, eval_episodes):
         action = env.get_pl()
         action = action.repeat(90) #repeat the action for 90 steps
         full_pl = env.get_full_pl()
-        next_obs, reward, terminal, info = env.step(action) #next state predictions
+        next_obs, reward, terminal, info = env.step_crps(action) #next state predictions
 
         #MSE of next_obs and next_state_gt
-        mse = np.mean((next_obs.reshape(-1,1) - next_state_gt)**2)*env.rwd_stds[12]
+        mse = ((next_obs.reshape(1,-1) - next_state_gt)**2).mean()*env.rwd_stds[12]
 
         #obs: (0,90) next_state_gt:(90,180) next_obs: (90,180), action: (90,180) act: (90,180)
-        crps_list.extend(info['crps'])
         episode_reward += reward
         episode_length += 1       
 
-        # if i == env.data['observations'].shape[0]-1:
-        #     self.plot_predictions_rl(obs.reshape(1,90,12), next_state_gt.reshape(1,90,12), next_obs.reshape(1,90,12), action.reshape(1,90), full_pl.reshape(1,90), num_episodes)
+       
     
         eval_ep_info_buffer.append(
             {"episode_reward": episode_reward,
@@ -171,7 +168,7 @@ if __name__ == "__main__":
     parser.add_argument(
                     "--devid", 
                     type=int,
-                    default=6,
+                    default=3,
                     help="Which GPU device index to use"
                 )
     parser.add_argument("--iter", type=int, default=3)
@@ -179,7 +176,7 @@ if __name__ == "__main__":
     parser.add_argument("--task", type=str, default="Abiomed-v0")
     parser.add_argument("--seed", type=int, default=1)
     parser.add_argument('--num_samples', type=int, default=50)
-    parser.add_argument('--crps_scale', type=float, default=0.1)
+    parser.add_argument('--crps_scale', type=float, default=0.3)
 
 
     parser.add_argument("--logdir", type=str, default="log")
@@ -193,7 +190,7 @@ if __name__ == "__main__":
                         help='Specify the sequence dimension.')
     parser.add_argument('-bc', '--bc', type=int, metavar='<size>', default=64,
                         help='Specify the batch size.') 
-    parser.add_argument('-nepochs', '--nepochs', type=int, metavar='<epochs>', default=1, #change
+    parser.add_argument('-nepochs', '--nepochs', type=int, metavar='<epochs>', default=20, #change
                         help='Specify the number of epochs to train for.')
     parser.add_argument('-encoder_size', '--encs', type=int, metavar='<size>', default=2,
                 help='Set the number of encoder layers.') 
@@ -229,7 +226,6 @@ if __name__ == "__main__":
     # log
     t0 = datetime.datetime.now().strftime("%m%d_%H%M%S")
     log_file = f'seed_{args.seed}_{t0}-{args.task.replace("-", "_")}_{args.algo_name}'
-    # log_file = 'seed_1_0413_220409-Abiomed_v0_mbpo_uq_rerun'
     log_path = os.path.join(args.logdir, args.task, args.algo_name, log_file)
 
     model_path = os.path.join(args.model_path, args.task, args.algo_name, log_file)
@@ -244,8 +240,12 @@ if __name__ == "__main__":
     scaler_info = {'rwd_stds': None, 'rwd_means':None, 'scaler': None}
     args.data_name = 'train'
     eval_episodes = 49939
+
+    print('-----started generating train------')
     scaler_info = main(0, logger, args, scaler_info,eval_episodes, offline_buffer = None, ) 
 
+    args.pretrained = True
     args.data_name = 'test'
     eval_episodes = 28015
+    print('-----started generating test------')
     _ = main(0, logger, args, scaler_info, eval_episodes,offline_buffer = None, ) 
