@@ -62,10 +62,10 @@ class MOPO:
         observations = init_transitions["observations"]
         for _ in range(self._rollout_length):
             actions = self.policy.sample_action(observations)
-            # starttime = time.time()
-            # print(self._rollout_batch_size)
+            starttime = time.time()
+            print(self._rollout_batch_size)
             next_observations, rewards, terminals, infos = self.dynamics_model.predict(observations, actions)
-            # print('rollout pred time', starttime - time.time())
+            print('rollout pred time', starttime - time.time())
             self.model_buffer.add_batch(observations, next_observations, actions, rewards, terminals)
             nonterm_mask = (~terminals).flatten()
             if nonterm_mask.sum() == 0:

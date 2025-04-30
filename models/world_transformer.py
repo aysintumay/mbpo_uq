@@ -49,14 +49,15 @@ class WorldTransformer:
         # self.train_loader = self.read_data('train')
         # self.test_loader = self.read_data(mode = 'test') 
         self.model_save_dir = util.logger_model.log_path
-        if args.data_name == 'train':   
-            self.train_loader = self.read_data('train')
-        else:
-            self.test_loader = self.read_data('test')
+       
         if pretrained:
             self.trained_model = self.load_model()
             print('loaded model')
         else:
+            if args.data_name == 'train':   
+                self.train_loader = self.read_data('train')
+            else:
+                self.test_loader = self.read_data('test')
             self.trained_model = self.train_model()
             print('trained model')
         self.rwd_mean = None
@@ -102,7 +103,7 @@ class WorldTransformer:
         dta = dta[: ,:, :-1]
         self.rwd_mean = dta.mean(axis=(0, 1))
         self.rwd_std = dta.std(axis=(0, 1))
-        horizon = int(self.args.output_dim/self.seq_dim-1)
+        horizon = int(self.output_dim/self.seq_dim-1)
         if mode == 'test':
             dta = torch.load(os.path.join(self.path, 'pp_test_amicgs.pt')).numpy()
             dta = dta[: ,:, :-1]
@@ -113,7 +114,7 @@ class WorldTransformer:
         print("plshape is ", pl.shape)
         pl = pl[..., :horizon]
         dataset = TimeSeriesDataset(x, pl, y)
-        loader = DataLoader(dataset, batch_size=self.args.bc, shuffle=True)
+        loader = DataLoader(dataset, batch_size=self.bc, shuffle=True)
         return loader
 
     def resize(self, obs, action, next_state):
@@ -130,7 +131,7 @@ class WorldTransformer:
         # Load the model state dict
    
         # self.model.load_state_dict(torch.load(os.path.join(self.logger.writer.get_logdir(), f"checkpoint_epoch_{self.args.epoch}.pth")))
-        self.model.load_state_dict(torch.load(os.path.join('/data/models/world_model', f"checkpoint_epoch_{self.args.task}_{self.nepochs}.pth")))
+        self.model.load_state_dict(torch.load(os.path.join('/data/models/world_model', f"checkpoint_epoch_v_1_{self.args.task}_{self.nepochs}.pth")))
         return self.model.to(self.device)
     
     def predict(self, obs_loader):

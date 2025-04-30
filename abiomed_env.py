@@ -88,7 +88,7 @@ class AbiomedEnv(gym.Env):
     
         if self.offline_buffer is None:
 
-            train = torch.load(f"/data/abiomed_tmp/processed/pp_{self.args.data_name}_amicgs.pt").numpy()
+            train = torch.load(f"/data/abiomed_tmp/processed/pp_{self.args.data_name}_amicgs.pt").numpy()[:10000]
             
             if self.args.data_name == 'train':
                 #dont take ID column
@@ -227,21 +227,21 @@ class AbiomedEnv(gym.Env):
             
         dataloder = self.world_model.resize(obs, action, next_state)
         next_obs = self.world_model.predict(dataloder)
-        num_samples = self.args.num_samples
-        output_mult = self.world_model.trained_model.sample_autoregressive_multiple(torch.Tensor(obs.reshape(-1, 90, self.args.seq_dim)).to(util.device), torch.Tensor(action.reshape(1,-1)).to(util.device), num_samples=num_samples,)
-        # output_mult_all.append(output_mult)
+        # num_samples = self.args.num_samples
+        # output_mult = self.world_model.trained_model.sample_autoregressive_multiple(torch.Tensor(obs.reshape(-1, 90, self.args.seq_dim)).to(util.device), torch.Tensor(action.reshape(1,-1)).to(util.device), num_samples=num_samples,)
         next_obs_unnorm = self.unnormalize(next_obs, np.arange(0,12))
-        output_mult = output_mult.detach().cpu().numpy()
-        # for i in range(num_samples):
-        output_mult = self.unnormalize(output_mult, np.arange(0,12))
-        #get rewards
-        next_state = self.unnormalize(next_state.reshape(1, 90, self.args.seq_dim), np.arange(0,12))
-        reward, crps = self.get_reward_crps(next_obs_unnorm, output_mult, next_state)
+        # output_mult = output_mult.detach().cpu().numpy()
+        # # for i in range(num_samples):
+        # output_mult = self.unnormalize(output_mult, np.arange(0,12))
+        # #get rewards
+        # next_state = self.unnormalize(next_state.reshape(1, 90, self.args.seq_dim), np.arange(0,12))
+        # reward, crps = self.get_reward_crps(next_obs_unnorm, output_mult, next_state)
 
-        # reward = self.compute_reward(next_obs_unnorm)
+        reward = self.compute_reward(next_obs_unnorm)
         #unnormalize
         done = self.check_terminal_condition()
-        info = {'crps': crps}
+        # info = {'crps': crps}
+        info = {}
         self.current_index += 1
         return next_obs, reward, done, info
     

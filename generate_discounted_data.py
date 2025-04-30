@@ -160,7 +160,7 @@ def generate_data(dataset, env, eval_episodes):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--algo-name", type=str, default="mbpo_uq")
-    parser.add_argument("--pretrained", type=bool, default=True)
+    parser.add_argument("--pretrained", type=bool, default=False)
     parser.add_argument("--mode", type=str, default="offline")
     # parser.add_argument("--task", type=str, default="walker2d-medium-replay-v2")
     parser.add_argument("--model_path" , type=str, default="saved_models")
@@ -193,7 +193,7 @@ if __name__ == "__main__":
                         help='Specify the sequence dimension.')
     parser.add_argument('-bc', '--bc', type=int, metavar='<size>', default=64,
                         help='Specify the batch size.') 
-    parser.add_argument('-nepochs', '--nepochs', type=int, metavar='<epochs>', default=1, #change
+    parser.add_argument('-nepochs', '--nepochs', type=int, metavar='<epochs>', default=20, #change
                         help='Specify the number of epochs to train for.')
     parser.add_argument('-encoder_size', '--encs', type=int, metavar='<size>', default=2,
                 help='Set the number of encoder layers.') 
@@ -244,8 +244,12 @@ if __name__ == "__main__":
     scaler_info = {'rwd_stds': None, 'rwd_means':None, 'scaler': None}
     args.data_name = 'train'
     eval_episodes = 49939
+
+    print('-----started generating train------')
     scaler_info = main(0, logger, args, scaler_info,eval_episodes, offline_buffer = None, ) 
 
+    args.pretrained = True
     args.data_name = 'test'
     eval_episodes = 28015
+    print('-----started generating test------')
     _ = main(0, logger, args, scaler_info, eval_episodes,offline_buffer = None, ) 
