@@ -1,2 +1,4 @@
 intermediate_data/*.pkl
 wandb/
+*__pycache__*
+*.pyc

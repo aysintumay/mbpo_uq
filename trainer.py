@@ -70,7 +70,8 @@ class Trainer:
         run_id,
         env_name = '',
         eval_episodes=10,
-        terminal_counter=1
+        terminal_counter=1,
+        ite = 0
     ):
         self.algo = algo
         self.eval_env = eval_env
@@ -88,6 +89,8 @@ class Trainer:
 
         self._eval_episodes = eval_episodes
         self.terminal_counter = terminal_counter
+
+        self.iter = ite
 
         run = wandb.init(project="abiomed",
                 id=self.run_id,
@@ -134,46 +137,46 @@ class Trainer:
                     num_timesteps += 1
                     t.update(1)
             # evaluate current policy
-            if e % 1 == 0:
-                if self.eval_env.id == 'Abiomed-v0':
-                    eval_info, _ = self.evaluate()
-                    ep_reward_mean, ep_reward_std = np.mean(eval_info["eval/episode_reward"]), np.std(eval_info["eval/episode_reward"])
-                    ep_length_mean, ep_length_std = np.mean(eval_info["eval/episode_length"]), np.std(eval_info["eval/episode_length"])
-                    ep_accuracy_mean, ep_accuracy_std = np.mean(eval_info["eval/episode_accuracy"]), np.std(eval_info["eval/episode_accuracy"])
-                    ep_1_off_accuracy_mean, ep_1_off_accuracy_std = np.mean(eval_info["eval/episode_1_off_accuracy"]), np.std(eval_info["eval/episode_1_off_accuracy"])
-                    ep_mse_mean, ep_mse_std = np.mean(eval_info["eval/mse"]), np.std(eval_info["eval/mse"])
-                    acc_l.append(ep_accuracy_mean)
-                    off_acc.append(ep_1_off_accuracy_mean)
-                    acc_std_l.append(ep_accuracy_std)
-                    off_acc_std.append(ep_1_off_accuracy_std)
-                    self.logger.record("eval/episode_accuracy", ep_accuracy_mean, num_timesteps, printed=False)
-                    self.logger.record("eval/episode_1_off_accuracy", ep_1_off_accuracy_mean, num_timesteps, printed=False)
-                    self.logger.record("eval/mse", ep_mse_mean, num_timesteps, printed=False)
-                    self.logger.print(f"Epoch #{e}: episode_accuracy: {ep_accuracy_mean:.3f} ± {ep_accuracy_std:.3f},\
-                                    episode_1_off_accuracy: {ep_1_off_accuracy_mean:.3f} ± {ep_1_off_accuracy_std:.3f}"
-                                    )
-                else:
-                    eval_info = self._evaluate()
+            # if e % 50 == 0:
+            #     if self.eval_env.id == 'Abiomed-v0':
+            #         eval_info, _ = self.evaluate()
+            #         ep_reward_mean, ep_reward_std = np.mean(eval_info["eval/episode_reward"]), np.std(eval_info["eval/episode_reward"])
+            #         ep_length_mean, ep_length_std = np.mean(eval_info["eval/episode_length"]), np.std(eval_info["eval/episode_length"])
+            #         ep_accuracy_mean, ep_accuracy_std = np.mean(eval_info["eval/episode_accuracy"]), np.std(eval_info["eval/episode_accuracy"])
+            #         ep_1_off_accuracy_mean, ep_1_off_accuracy_std = np.mean(eval_info["eval/episode_1_off_accuracy"]), np.std(eval_info["eval/episode_1_off_accuracy"])
+            #         ep_mse_mean, ep_mse_std = np.mean(eval_info["eval/mse"]), np.std(eval_info["eval/mse"])
+            #         acc_l.append(ep_accuracy_mean)
+            #         off_acc.append(ep_1_off_accuracy_mean)
+            #         acc_std_l.append(ep_accuracy_std)
+            #         off_acc_std.append(ep_1_off_accuracy_std)
+            #         self.logger.record("eval/episode_accuracy", ep_accuracy_mean, num_timesteps, printed=False)
+            #         self.logger.record("eval/episode_1_off_accuracy", ep_1_off_accuracy_mean, num_timesteps, printed=False)
+            #         self.logger.record("eval/mse", ep_mse_mean, num_timesteps, printed=False)
+            #         self.logger.print(f"Epoch #{e}: episode_accuracy: {ep_accuracy_mean:.3f} ± {ep_accuracy_std:.3f},\
+            #                         episode_1_off_accuracy: {ep_1_off_accuracy_mean:.3f} ± {ep_1_off_accuracy_std:.3f}"
+            #                         )
+            #     else:
+            #         eval_info,_ = self._evaluate()
                     
-                    ep_reward_mean, ep_reward_std = np.mean(eval_info["eval/episode_reward"]), np.std(eval_info["eval/episode_reward"])
-                    ep_length_mean, ep_length_std = np.mean(eval_info["eval/episode_length"]), np.std(eval_info["eval/episode_length"])
+            #         ep_reward_mean, ep_reward_std = np.mean(eval_info["eval/episode_reward"]), np.std(eval_info["eval/episode_reward"])
+            #         ep_length_mean, ep_length_std = np.mean(eval_info["eval/episode_length"]), np.std(eval_info["eval/episode_length"])
                 
                     
-                reward_l.append(ep_reward_mean)
-                reward_std_l.append(ep_reward_std)
+            #     reward_l.append(ep_reward_mean)
+            #     reward_std_l.append(ep_reward_std)
                 
-                self.logger.record("eval/episode_reward", ep_reward_mean, num_timesteps, printed=False)
-                self.logger.record("eval/episode_length", ep_length_mean, num_timesteps, printed=False)
+            #     self.logger.record("eval/episode_reward", ep_reward_mean, num_timesteps, printed=False)
+            #     self.logger.record("eval/episode_length", ep_length_mean, num_timesteps, printed=False)
 
-                self.logger.print(f"Epoch #{e}: episode_reward: {ep_reward_mean:.3f} ± {ep_reward_std:.3f},\
-                                episode_length: {ep_length_mean:.3f} ± {ep_length_std:.3f}"
-                                )
+            #     self.logger.print(f"Epoch #{e}: episode_reward: {ep_reward_mean:.3f} ± {ep_reward_std:.3f},\
+            #                     episode_length: {ep_length_mean:.3f} ± {ep_length_std:.3f}"
+            #                     )
             
             # save policy
             model_save_dir = util.logger_model.log_path
             if not os.path.exists(model_save_dir):
                 os.makedirs(model_save_dir)
-            torch.save(self.algo.policy.to('cpu').state_dict(), os.path.join(model_save_dir, f"policy_{self.env_name}.pth")) #plot q_values for each epoch
+            torch.save(self.algo.policy.to('cpu').state_dict(), os.path.join(model_save_dir, f"policy_{self.env_name}_{self.iter}.pth")) #plot q_values for each epoch
             print(util.device)
             self.algo.policy.to(util.device)        
         if self.run_id != 0: 
@@ -196,16 +199,31 @@ class Trainer:
         
 
 
-    def _evaluate(self):
+    def _evaluate(self, world_model):
+
+        #TODO: in progress
         self.algo.policy.eval()
         obs = self.eval_env.reset()
         eval_ep_info_buffer = []
         num_episodes = 0
         episode_reward, episode_length = 0, 0
-
+        obs_ = []
+        next_obs_ = []
+        action_ = []
+        full_action_ = []
+        reward_ = []
+        terminal_ = []
         while num_episodes < self._eval_episodes:
             action = self.algo.policy.sample_action(obs, deterministic=True)
-            next_obs, reward, terminal, _ = self.eval_env.step(action)
+            next_obs, reward, terminal, _ = self.eval_env.step(action) #d4rl env
+            #predict next_obs
+            pred_input = torch.FloatTensor(np.concatenate([obs, action])).to(world_model.device)
+
+            next_obs_mult = world_model.predict_multiple(pred_input, num_samples=50).cpu().numpy()
+            #calculate std over next_obs_mult
+            std = (next_obs_mult.std(axis=0)).mean().item()
+            penalized_reward = reward - self.eval_env.crps_scale * std
+
             episode_reward += reward
             episode_length += 1
 
@@ -218,11 +236,22 @@ class Trainer:
                 num_episodes +=1
                 episode_reward, episode_length = 0, 0
                 obs = self.eval_env.reset()
-        
+            obs_.append(list(obs[0]))
+            next_obs_.append(list(next_obs.reshape(obs.shape)[0]))
+            action_.append(action)
+            reward_.append(penalized_reward)
+            terminal_.append(terminal)
+        dataset = {
+                'observations': np.array(obs_),
+                'actions': np.array(action_),  # Reshape to ensure it's 2D
+                'rewards': np.array(reward_),
+                'terminals': np.array(terminal_),
+                'next_observations': np.array(next_obs_),
+            }
         return {
             "eval/episode_reward": [ep_info["episode_reward"] for ep_info in eval_ep_info_buffer],
             "eval/episode_length": [ep_info["episode_length"] for ep_info in eval_ep_info_buffer]
-        }
+        },dataset
 
 
     def evaluate(self):
@@ -240,14 +269,15 @@ class Trainer:
         full_action_ = []
         reward_ = []
         terminal_ = []
+        raw_reward_ = []
         terminal_counter = 0
         N = self.eval_env.data['observations'].shape[0]
 
         indx = np.random.choice(N,
                                 size=self._eval_episodes,
                                 replace=False)
-
-        for i in tqdm(indx.shape):
+        
+        for i in tqdm(range(indx.shape[0])):
             start_time = time.time()
             act = self.eval_env.get_pl()
            
@@ -256,13 +286,15 @@ class Trainer:
             action = action.repeat(90) #repeat the action for 90 steps
 
             full_pl = self.eval_env.get_full_pl()
-            next_obs, reward, terminal, info = self.eval_env.step(action) #next state predictions
-
+            next_obs, reward, terminal, info = self.eval_env.step_std(action) #next state predictions
+            rwd_rewards = self.eval_env.compute_reward(next_obs) #dropout not enabled prediction
+            next_obs = self.eval_env.normalize(next_obs, idx=np.arange(0,12))
             #MSE of next_obs and next_state_gt
             mse = np.mean((next_obs.reshape(-1,1) - next_state_gt)**2)*self.eval_env.rwd_stds[12]
 
             #obs: (0,90) next_state_gt:(90,180) next_obs: (90,180), action: (90,180) act: (90,180)
-            # crps_list.extend(info['crps'])
+            if info != {}:
+                crps_list.extend([info['std']])
             episode_reward += reward
             episode_length += 1
 
@@ -271,7 +303,7 @@ class Trainer:
             # acc_total += acc
             # acc_1_off_total += acc_1_off
 
-            if i == self.eval_env.data['observations'].shape[0]-1:
+            if i == indx.shape[0]-1:
                 self.plot_predictions_rl(obs.reshape(1,90,12), next_state_gt.reshape(1,90,12), next_obs.reshape(1,90,12), action.reshape(1,90), full_pl.reshape(1,90), num_episodes)
             
             
@@ -293,16 +325,32 @@ class Trainer:
             #obs, next_obs, reward, done
 
             obs_.append(list(obs[0]))
-            next_obs_.append(list(next_state_gt.reshape(obs.shape)[0]))
+            next_obs_.append(list(next_obs.reshape(obs.shape)[0]))
             action_.append(action[0])
             full_action_.append(full_pl)
             reward_.append(reward)
             terminal_.append(terminal)
 
+            raw_reward_.append(rwd_rewards)
             if num_episodes != self.eval_env.data['observations'].shape[0]:
                 obs = self.eval_env.get_obs().reshape(1,-1)
             else:
                 break
+        
+        #rewards withput std penalty using D_1
+        with open(f'/data/abiomed_tmp/intermediate_data_uambpo/raw_rewards_{self.eval_env.crps_scale}_{self.iter}.pkl', 'wb') as f:
+            np.save(f, np.array(raw_reward_))
+        #rewards with penalty using D_1
+        with open(f'/data/abiomed_tmp/intermediate_data_uambpo/rewards_{self.eval_env.crps_scale}_{self.iter}.pkl', 'wb') as f:
+            np.save(f, np.array(reward_))
+        #save crps list
+        with open(f'/data/abiomed_tmp/intermediate_data_uambpo/crps_list_{self.eval_env.crps_scale}_{self.iter}.pkl', 'wb') as f:
+            np.save(f, np.array(crps_list))
+        
+
+
+        
+
         #need actions to be unnormalized for plotting
         action_ = self.eval_env.unnormalize(np.array(action_), idx=12)
         full_action_ = self.eval_env.unnormalize(np.array(full_action_), idx=12).reshape(-1,90)
