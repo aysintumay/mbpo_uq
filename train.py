@@ -119,15 +119,18 @@ def train(i, logger, run, model_logger, args, scaler_info, offline_buffer = None
     args.obs_shape = env.observation_space.shape
     args.action_dim = np.prod(env.action_space.shape)
 
+    #save self.eval_env.rwd_means, self.eval_env.rwd_stds, self.eval_env.scale
+    with open(f'/data/abiomed_tmp/intermediate_data_uambpo/scale_info_{args.crps_scale}_{i}', 'wb') as f:
+        np.save(f, {'means':env.rwd_means, 'std':env.rwd_stds})
    
 
     env.seed(args.seed)
-    if (i == 0) & (args.data_name == 'train'):
-        data_save = env.data.copy()
-        data_save['rewards'] = env.normalize_reward(data_save['rewards'])
+    # if (i == 0) & (args.data_name == 'train'):
+    #     data_save = env.data.copy()
+    #     data_save['rewards'] = env.normalize_reward(data_save['rewards'])
         
-        with open(os.path.join('/data/abiomed_tmp/intermediate_data_uambpo',f'dataset_train_0.pkl'), 'wb') as f:
-            pickle.dump(data_save, f)
+    #     with open(os.path.join('/data/abiomed_tmp/intermediate_data_uambpo',f'dataset_train_0.pkl'), 'wb') as f:
+    #         pickle.dump(data_save, f)
 
 
     # import configs
@@ -263,6 +266,7 @@ def train(i, logger, run, model_logger, args, scaler_info, offline_buffer = None
         env_name = args.task,
         eval_episodes=args.eval_episodes,
         terminal_counter= args.terminal_counter if args.task == "Abiomed-v0" else None,
+        ite = i
 
         
     )

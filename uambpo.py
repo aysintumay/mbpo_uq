@@ -66,7 +66,7 @@ def main(args):
         
             with open(f'/data/abiomed_tmp/intermediate_data_uambpo/discounted_trainset.pkl', 'rb') as f:
                 offline_buffer_train = pickle.load(f)
-            with open('/data/abiomed_tmp/intermediate_data_uambpo/discounted_trainset.pkl', 'rb') as f:
+            with open('/data/abiomed_tmp/intermediate_data_uambpo/discounted_testset.pkl', 'rb') as f:
                 offline_buffer_test = pickle.load(f)
         
             stds = np.array([1.2599670e+01, 4.6925778e+02, 5.8842087e+01, 1.5025043e+01,
@@ -86,8 +86,7 @@ def main(args):
         args.pretrained = True
         args.data_name = 'train'  
 
-        args.crps_scale = 1
-        # args.eval_episodes = 7 #1000 
+        # args.crps_scale = 1
     
         #train on offline dataset or replayed dataset
         norm_info, trainer = train(i, logger, run, model_logger, args, norm_info, offline_buffer_train if offline_buffer_train is not None else None, )
@@ -97,16 +96,15 @@ def main(args):
         policy = trainer.algo.policy
         # trainer.algo.policy.load_state_dict(policy)
         
-        os.makedirs(model_path, exist_ok=True)
-        #save policy
-        torch.save(policy.state_dict(), os.path.join(model_path, f"policy_v_1_{args.task}_{i}.pth"))
+        # os.makedirs(model_path, exist_ok=True)
+        # #save policy
+        # torch.save(policy.state_dict(), os.path.join(model_path, f"policy_v_1_{args.task}_{args.crps_scale}_{i}.pth"))
         # policy.to(util.device)
         #save transition model
         trainer.algo.save_dynamics_model(f"dynamics_model_{i}")
         
         if i == args.iter-1:
             args.crps_scale = None
-        # args.policy_path = os.path.join(log_path, f"policy_{args.task}.pth")
 
         trainer._eval_episodes = 49939
         args.data_name = 'train'
@@ -121,7 +119,7 @@ def main(args):
         #save the dataset
         if not os.path.exists('/data/abiomed_tmp/intermediate_data_uambpo'):
             os.makedirs('/data/abiomed_tmp/intermediate_data_uambpo')
-        with open(os.path.join('/data/abiomed_tmp/intermediate_data_uambpo',f'dataset_train_v_{i+1}.pkl'), 'wb') as f:
+        with open(os.path.join('/data/abiomed_tmp/intermediate_data_uambpo',f'dataset_train_v_{args.crps_scale}_{i+1}.pkl'), 'wb') as f:
             pickle.dump(dataset_train, f)
 
         #get renewed test dataset of 20k
@@ -133,7 +131,7 @@ def main(args):
 
         dataset_test, eval_info = test(i, args,model_logger,norm_info, policy, trainer, offline_buffer_test if offline_buffer_test is not None else None, log_path)
         #save the dataset
-        with open(os.path.join('/data/abiomed_tmp/intermediate_data_uambpo',f'dataset_test_v_{i+1}.pkl'), 'wb') as f:
+        with open(os.path.join('/data/abiomed_tmp/intermediate_data_uambpo',f'dataset_test_v_{args.crps_scale}_{i+1}.pkl'), 'wb') as f:
             pickle.dump(dataset_test, f)
 
         offline_buffer_train = dataset_train

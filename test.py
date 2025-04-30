@@ -155,13 +155,13 @@ def test(i, args, model_logger, norm_info, sac_policy, trainer, offline_buffer=N
     else:
         env = gym.make(args.task)
 
-    if (i == 0) & (args.data_name == 'test'):
+    # if (i == 0) & (args.data_name == 'test'):
 
-        data_save = env.data.copy()
-        data_save['rewards'] = env.normalize_reward(data_save['rewards'])
+    #     data_save = env.data.copy()
+    #     data_save['rewards'] = env.normalize_reward(data_save['rewards'])
         
-        with open(os.path.join('/data/abiomed_tmp/intermediate_data_uambpo',f'dataset_test_0.pkl'), 'wb') as f:
-            pickle.dump(data_save, f)
+    #     with open(os.path.join('/data/abiomed_tmp/intermediate_data_uambpo',f'dataset_test_0.pkl'), 'wb') as f:
+    #         pickle.dump(data_save, f)
     # dataset = d4rl.qlearning_dataset(env)
     # args.obs_shape = env.observation_space.shape
     # args.action_dim = np.prod(env.action_space.shape)
@@ -185,6 +185,7 @@ def test(i, args, model_logger, norm_info, sac_policy, trainer, offline_buffer=N
     return test_dataset, eval_info
 
 if __name__ == "__main__":
+
 
     
     test()

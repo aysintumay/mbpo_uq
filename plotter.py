@@ -161,7 +161,7 @@ def plot_histogram(data, y_label,):
     plt.figure(figsize=(8, 5))
     
     # Loop over the three iterations
-    labels = ['D_env', 'D_1'] + [f'Iteration {i}' for i in range(1, len(data))]
+    labels = ['D_env'] + [f'Iteration {i}' for i in range(1, len(data))]
 
     for (i, c, lbl) in zip(range(len(data)), color, labels):
         plt.hist(
@@ -290,21 +290,26 @@ if __name__ == '__main__':
     kwargs = {"args": args, "logger": logger, "scaler_info": norm_info}
     env = gym.make(args.task, **kwargs)
 
-    args.data_name = 'test'
-    norm_info = {'rwd_stds': env.rwd_stds, 'rwd_means': env.rwd_means, 'scaler':  env.scaler}
-    kwargs = {"args": args, "logger": logger, "scaler_info": norm_info}
-    env = gym.make(args.task, **kwargs)
+    # args.data_name = 'test'
+    # norm_info = {'rwd_stds': env.rwd_stds, 'rwd_means': env.rwd_means, 'scaler':  env.scaler}
+    # kwargs = {"args": args, "logger": logger, "scaler_info": norm_info}
+    # env = gym.make(args.task, **kwargs)
     dataset = env.data
 
     data_paths = [
                 #   os.path.join(args.data_path, f"dataset_test_0.pkl"), 
-                  os.path.join(args.data_path, f"discounted_testset.pkl"), #10k
-                  os.path.join(args.data_path, f"dataset_test_v_1.pkl"), 
-                    os.path.join(args.data_path, f"dataset_test_v_2.pkl"),
-                    os.path.join(args.data_path, f"dataset_test_v_3.pkl"),
-                    os.path.join(args.data_path, f"dataset_test_v_4.pkl"),
+                #   os.path.join(args.data_path, f"discounted_testset.pkl"), #10k
+                  os.path.join(args.data_path, f"dataset_train_v_1.pkl"), 
+                    os.path.join(args.data_path, f"dataset_train_v_2.pkl"),
+                    os.path.join(args.data_path, f"dataset_train_v_3.pkl"),
+                    # os.path.join(args.data_path, f"dataset_train_v_4.pkl"),
                   
                 ]
+    
+    # rew_data_paths = [ 
+    #                 os.path.join(args.data_path, f"raw_rewards_1"), 
+    #                 os.path.join(args.data_path, f"rewards_1"),
+    # ]
 
     data = {}
     data[0] = env.data
@@ -320,14 +325,24 @@ if __name__ == '__main__':
                 
         i += 1
 
-    data[0]['rewards'] = data[0]['rewards'][:5000]
-    data[0]['actions'] = data[0]['actions'][:5000]
-    data[1]['rewards'] = data[1]['rewards'][:5000]
-    data[1]['actions'] = data[1]['actions'][:5000]
+
+    rew = {}
+    # for path in rew_data_paths:
+        
+    #     with open(path, 'rb') as f:
+    #         rew[i] = pickle.load(f)
+
+
+    # data[0]['rewards'] = data[0]['rewards'][:5000]
+    # data[0]['actions'] = data[0]['actions'][:5000]
+    # data[1]['rewards'] = data[1]['rewards'][:5000]
+    # data[1]['actions'] = data[1]['actions'][:5000]
 
     # with open(data_paths[0], 'rb') as f:
     #     data[0] = pickle.load(f)
     plot_histogram(data, args.hist_ylabel)
     
     plot_histogram(data, args.hist_ylabel2)
+
+    # plot_histogram(rew, 'rewards')
         

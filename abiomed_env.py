@@ -270,6 +270,7 @@ class AbiomedEnv(gym.Env):
         dataloder = self.world_model.resize(obs, action, next_state)
         next_obs = self.world_model.predict(dataloder)
         next_obs_unnorm = self.unnormalize(next_obs, np.arange(0,12))
+        
         if self.crps_scale is not None:
             
             num_samples = self.args.num_samples

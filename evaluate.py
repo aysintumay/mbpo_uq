@@ -162,7 +162,7 @@ def evaluate(policy, eval_env, eval_episodes, _terminal_counter):
         terminal_counter += 1
         acc, acc_1_off = eval_acc(eval_env, action, full_pl)
         
-        if num_episodes % 10 == 0:
+        if num_episodes % 100 == 0:
             plot_predictions_rl(eval_env, obs.reshape(1,90,12), next_state_gt.reshape(1,90,12), next_obs.reshape(1,90,12), action.reshape(1,90), full_pl.reshape(1,90), num_episodes)
         
         #obs: (0,90) next_state_gt:(90,180) next_obs: (90,180), action: (90,180) act: (90,180)
@@ -191,10 +191,10 @@ def evaluate(policy, eval_env, eval_episodes, _terminal_counter):
             "eval/episode_1_off_accuracy": [ep_info["episode_1_off_accuracy"] for ep_info in eval_ep_info_buffer],
         }
 
-def get_env():
+def get_env(offline_buffer_train=None, offline_buffer_test=None, norm_info=None):
 
     args.data_name = 'train' #to obtain norm_info
-    norm_info = {'rwd_stds': None, 'rwd_means':None, 'scaler': None}
+    # norm_info = {'rwd_stds': None, 'rwd_means':None, 'scaler': None}
  
     # create env and dataset
     gym.envs.registration.register(
@@ -203,11 +203,15 @@ def get_env():
     max_episode_steps = 1000,
     )
     kwargs = {"args": args, "logger": logger, 'scaler_info': norm_info}
+    if offline_buffer_train is not None:
+            kwargs["offline_buffer"] = offline_buffer_train
     env = gym.make(args.task, **kwargs) #get the norm_info 
     
     env.scaler_info = {'rwd_stds': env.rwd_stds, 'rwd_means':env.rwd_means, 'scaler': env.scaler}
     args.data_name = 'test'
     kwargs = {"args": args, "logger": logger, 'scaler_info': env.scaler_info}
+    if offline_buffer_train is not None:
+            kwargs["offline_buffer"] = offline_buffer_test
     env = gym.make(args.task, **kwargs)
    
 
@@ -315,6 +319,7 @@ if __name__ == "__main__":
         mopo_args(parser)
     elif args_partial.algo_name == "mbpo":
         mopo_args(parser)
+        
     elif args_partial.algo_name == "uambpo":
         mopo_args(parser)
     # elif args_partial.algo_name == "bcq":
@@ -342,11 +347,29 @@ if __name__ == "__main__":
     model_logger = Logger(writer=writer,log_path=model_path)
 
     Devid = args.devid if args.device == 'cuda' else -1
+
+
     set_device_and_logger(Devid, logger, model_logger)
 
+    with open(f'/data/abiomed_tmp/intermediate_data_uambpo/discounted_trainset.pkl', 'rb') as f:
+        offline_buffer_train = pickle.load(f)
+    with open('/data/abiomed_tmp/intermediate_data_uambpo/discounted_testset.pkl', 'rb') as f:
+        offline_buffer_test = pickle.load(f)
+
+    stds = np.array([1.2599670e+01, 4.6925778e+02, 5.8842087e+01, 1.5025043e+01,
+1.5730153e+01, 2.3981575e+01, 1.2024239e+01, 2.2280893e+01,
+1.7170943e+02, 1.7599674e+01, 1.9673981e-01, 1.4662008e+01,
+2.1159306e+00])
+    
+    means = np.array([7.3452431e+01, 3.9981541e+03, 2.8203378e+02, 3.9766106e+01,
+1.0223494e+01, 9.2290756e+01, 6.1786270e+01, 3.2400185e+01,
+6.0808063e+02, 8.4936722e+01, 6.1181599e-01, 6.5555145e+01,
+6.0715165e+00])
+
+    scaler_info = {'rwd_stds':stds, 'rwd_means':means, 'scaler': None}
     
     #if you saved the whole model: policy = torch.load(os.path.join(model_logger.log_path, f'policy_{args.task}.pth'))
-    env = get_env() 
+    env = get_env(offline_buffer_train, offline_buffer_test, scaler_info) 
     #if you saved the state_dict define the model class and load the model : write your own function
     policy = get_mopo()
     #change the policy path
