@@ -145,7 +145,8 @@ def plot_histogram(data, y_label,):
              COLORS[-5], 
              COLORS[-6],
                COLORS[-7], 
-               COLORS[-8]
+               COLORS[-8],
+                COLORS[-9],
                ]
     """
     Plot histograms of data[1][y_label], data[2][y_label], data[3][y_label],
@@ -158,28 +159,48 @@ def plot_histogram(data, y_label,):
     y_label : str
         Column/key to plot.
     """
-    plt.figure(figsize=(8, 5))
-    
-    # Loop over the three iterations
-    labels = ['D_env'] + [f'Iteration {i}' for i in range(1, len(data))]
+    import math
+    # Calculate grid dimensions based on number of iterations
+    n_plots = len(data)
+    n_cols = min(3, n_plots)  # Max 3 columns
+    n_rows = math.ceil(n_plots / n_cols)
 
+    # Create the main figure
+    plt.figure(figsize=(n_cols * 5, n_rows * 4))
+
+    # Labels for each iteration
+    labels = ['D_env', 'D_1'] + [f'Iteration {i}' for i in range(1, len(data))]
+
+
+    # Create each subplot
     for (i, c, lbl) in zip(range(len(data)), color, labels):
+        # Create subplot in the grid
+        plt.subplot(n_rows, n_cols, i + 1)
+        
+        # Plot histogram for this iteration
         plt.hist(
             np.round(data[i][y_label]),
             bins=50,
             density=True,
-            alpha=0.6,
+            alpha=0.8,
             color=c,
-            label=lbl,
         )
+        
+        plt.xlabel(y_label)
+        plt.ylabel('Count')
+        plt.title(lbl)
+        
+        # Add grid for better readability
+        plt.grid(alpha=0.3)
 
-    
-    plt.xlabel(y_label)
-    plt.ylabel('Count')
-    plt.title(f'Histogram of {y_label} over {i} iterations')
-    plt.legend()
-    plt.tight_layout()
-    out_file = os.path.join(args.output_path, f'{y_label}.png')
+    # Add overall title to the figure
+    plt.suptitle(f'Histogram of {y_label} across iterations', fontsize=16)
+
+    # Adjust layout to prevent overlap
+    plt.tight_layout(rect=[0, 0, 1, 0.96])  # Make room for suptitle
+
+    # Save figure
+    out_file = os.path.join(args.output_path, f'{y_label}_subplots.png')
     plt.savefig(out_file, dpi=args.dpi, bbox_inches='tight')
     plt.show()
 
@@ -290,19 +311,19 @@ if __name__ == '__main__':
     kwargs = {"args": args, "logger": logger, "scaler_info": norm_info}
     env = gym.make(args.task, **kwargs)
 
-    # args.data_name = 'test'
-    # norm_info = {'rwd_stds': env.rwd_stds, 'rwd_means': env.rwd_means, 'scaler':  env.scaler}
-    # kwargs = {"args": args, "logger": logger, "scaler_info": norm_info}
-    # env = gym.make(args.task, **kwargs)
+    args.data_name = 'test'
+    norm_info = {'rwd_stds': env.rwd_stds, 'rwd_means': env.rwd_means, 'scaler':  env.scaler}
+    kwargs = {"args": args, "logger": logger, "scaler_info": norm_info}
+    env = gym.make(args.task, **kwargs)
     dataset = env.data
 
     data_paths = [
-                #   os.path.join(args.data_path, f"dataset_test_0.pkl"), 
-                #   os.path.join(args.data_path, f"discounted_testset.pkl"), #10k
-                  os.path.join(args.data_path, f"dataset_train_v_1.pkl"), 
-                    os.path.join(args.data_path, f"dataset_train_v_2.pkl"),
-                    os.path.join(args.data_path, f"dataset_train_v_3.pkl"),
-                    # os.path.join(args.data_path, f"dataset_train_v_4.pkl"),
+                  os.path.join(args.data_path, f"discounted_testset.pkl"),
+                  os.path.join(args.data_path, f"dataset_test_v_0.7_1.pkl"), 
+                    os.path.join(args.data_path, f"dataset_test_v_0.7_2.pkl"),
+                    os.path.join(args.data_path, f"dataset_test_v_0.7_3.pkl"),
+                    os.path.join(args.data_path, f"dataset_test_v_0.7_4.pkl"),
+                    os.path.join(args.data_path, f"dataset_test_v_None_5.pkl"),
                   
                 ]
     
@@ -331,15 +352,12 @@ if __name__ == '__main__':
         
     #     with open(path, 'rb') as f:
     #         rew[i] = pickle.load(f)
-
-
     # data[0]['rewards'] = data[0]['rewards'][:5000]
     # data[0]['actions'] = data[0]['actions'][:5000]
     # data[1]['rewards'] = data[1]['rewards'][:5000]
     # data[1]['actions'] = data[1]['actions'][:5000]
 
-    # with open(data_paths[0], 'rb') as f:
-    #     data[0] = pickle.load(f)
+
     plot_histogram(data, args.hist_ylabel)
     
     plot_histogram(data, args.hist_ylabel2)
