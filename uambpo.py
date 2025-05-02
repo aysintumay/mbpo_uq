@@ -124,7 +124,7 @@ def main(args):
             pickle.dump(dataset_train, f)
 
         #get renewed test dataset of 20k
-        trainer._eval_episodes = 5000 #28015
+        trainer._eval_episodes = 28015
         args.data_name = 'test'
         args.mode = 'online'
         args.pretrained = True
