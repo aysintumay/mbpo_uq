@@ -157,7 +157,7 @@ def generate_data(dataset, env, eval_episodes):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--algo-name", type=str, default="mbpo_uq")
-    parser.add_argument("--pretrained", type=bool, default=True)
+    parser.add_argument("--pretrained", type=bool, default=False)
     parser.add_argument("--mode", type=str, default="offline")
     # parser.add_argument("--task", type=str, default="walker2d-medium-replay-v2")
     parser.add_argument("--model_path" , type=str, default="saved_models")

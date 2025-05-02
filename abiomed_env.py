@@ -224,6 +224,16 @@ class AbiomedEnv(gym.Env):
         next_state = self.data['next_observations'][self.current_index]
             
         dataloder = self.world_model.resize(obs, action, next_state)
+        next_obs = self.world_model.predict(dataloder)
+        # num_samples = self.args.num_samples
+        # output_mult = self.world_model.trained_model.sample_autoregressive_multiple(torch.Tensor(obs.reshape(-1, 90, self.args.seq_dim)).to(util.device), torch.Tensor(action.reshape(1,-1)).to(util.device), num_samples=num_samples,)
+        next_obs_unnorm = self.unnormalize(next_obs, np.arange(0,12))
+        # output_mult = output_mult.detach().cpu().numpy()
+        # # for i in range(num_samples):
+        # output_mult = self.unnormalize(output_mult, np.arange(0,12))
+        # #get rewards
+        # next_state = self.unnormalize(next_state.reshape(1, 90, self.args.seq_dim), np.arange(0,12))
+        # reward, crps = self.get_reward_crps(next_obs_unnorm, output_mult, next_state)
         # next_obs = self.world_model.predict(dataloder)
         num_samples = self.args.num_samples
         output_mult = self.world_model.trained_model.sample_autoregressive_multiple(torch.Tensor(obs.reshape(-1, 90, self.args.seq_dim)).to(util.device), torch.Tensor(action.reshape(1,-1)).to(util.device), num_samples=num_samples,)
@@ -235,10 +245,13 @@ class AbiomedEnv(gym.Env):
         next_state = self.unnormalize(next_state.reshape(1, 90, self.args.seq_dim), np.arange(0,12))
         reward, crps = self.get_reward_crps(output_mult_unnorm, next_state)
 
+        reward = self.compute_reward(next_obs_unnorm)
         next_obs = output_mult.mean(axis =0).detach().cpu() #mean of the probabilistic forecasts
         # reward = self.compute_reward(next_obs_unnorm)
         #unnormalize
         done = self.check_terminal_condition()
+        # info = {'crps': crps}
+        info = {}
         info = {'crps': crps}
         # info = {}
         self.current_index += 1
