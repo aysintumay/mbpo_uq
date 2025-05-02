@@ -199,7 +199,7 @@ class Trainer:
         
 
 
-    def _evaluate(self, world_model):
+    def _evaluate(self, world_model, crps_scale = 0):
 
         #TODO: in progress
         self.algo.policy.eval()
@@ -222,7 +222,7 @@ class Trainer:
             next_obs_mult = world_model.predict_multiple(pred_input, num_samples=50).cpu().numpy()
             #calculate std over next_obs_mult
             std = (next_obs_mult.std(axis=0)).mean().item()
-            penalized_reward = reward - self.eval_env.crps_scale * std
+            penalized_reward = reward - crps_scale * std
 
             episode_reward += reward
             episode_length += 1
@@ -236,8 +236,9 @@ class Trainer:
                 num_episodes +=1
                 episode_reward, episode_length = 0, 0
                 obs = self.eval_env.reset()
+
             obs_.append(list(obs[0]))
-            next_obs_.append(list(next_obs.reshape(obs.shape)[0]))
+            next_obs_.append(list(next_obs_mult.mean(axis=0).reshape(obs.shape)[0]))
             action_.append(action)
             reward_.append(penalized_reward)
             terminal_.append(terminal)

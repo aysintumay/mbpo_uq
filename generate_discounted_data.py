@@ -58,10 +58,10 @@ def main(i, logger, args, scaler_info,eval_episodes, offline_buffer = None, ):
         dataset = d4rl.qlearning_dataset(env)
     eval_info, dataset = generate_data(dataset, env, eval_episodes)
     # Save the dataset to a pickle file
-    with open(f"/data/abiomed_tmp/intermediate_data_uambpo/discounted_{args.data_name}set.pkl", "wb") as f:
+    with open(f"/data/abiomed_tmp/intermediate_data_uambpo/discounted_{args.data_name}set_{args.crps_scale}.pkl", "wb") as f:
         pickle.dump(dataset, f)
     #save the eval_info
-    with open(f"/data/abiomed_tmp/intermediate_data_uambpo/eval_info_{args.data_name}set.pkl", "wb") as f:
+    with open(f"/data/abiomed_tmp/intermediate_data_uambpo/eval_info_{args.data_name}set_{args.crps_scale}.pkl", "wb") as f:
         pickle.dump(eval_info, f)
     return {'rwd_stds':env.rwd_stds, 'rwd_means':env.rwd_means, 'scaler':env.scaler}
 
@@ -101,7 +101,7 @@ def generate_data(dataset, env, eval_episodes):
         episode_reward += reward
         episode_length += 1       
 
-       
+        # crps_list.append([info['crps']])
     
         eval_ep_info_buffer.append(
             {"episode_reward": episode_reward,
@@ -176,7 +176,7 @@ if __name__ == "__main__":
     parser.add_argument("--task", type=str, default="Abiomed-v0")
     parser.add_argument("--seed", type=int, default=1)
     parser.add_argument('--num_samples', type=int, default=50)
-    parser.add_argument('--crps_scale', type=float, default=0.3)
+    parser.add_argument('--crps_scale', type=float, default=0.6)
 
 
     parser.add_argument("--logdir", type=str, default="log")

@@ -25,104 +25,11 @@ from common import util
 from abiomed_env import AbiomedEnv
 
 
-# def get_args():
-#     parser = argparse.ArgumentParser()
-#     parser.add_argument("--algo-name", type=str, default="mopo")
-#     parser.add_argument("--pretrained", type=bool, default=True)
-#     parser.add_argument("--replay", type=bool, default=False)
-#     # parser.add_argument("--task", type=str, default="walker2d-medium-replay-v2")
-    
-#     parser.add_argument("--task", type=str, default="Abiomed-v0")
-#     parser.add_argument("--seed", type=int, default=1)
-#     parser.add_argument("--actor-lr", type=float, default=3e-4)
-#     parser.add_argument("--critic-lr", type=float, default=3e-4)
-#     parser.add_argument("--gamma", type=float, default=0.99)
-#     parser.add_argument("--tau", type=float, default=0.005)
-#     parser.add_argument("--alpha", type=float, default=0.2)
-#     parser.add_argument('--auto-alpha', default=True)
-#     parser.add_argument('--target-entropy', type=int, default=-3) #-action_dim
-#     parser.add_argument('--alpha-lr', type=float, default=3e-4)
 
-#     # dynamics model's arguments
-#     parser.add_argument("--dynamics-lr", type=float, default=0.001)
-#     parser.add_argument("--n-ensembles", type=int, default=7)
-#     parser.add_argument("--n-elites", type=int, default=5)
-#     parser.add_argument("--reward-penalty-coef", type=float, default=1.0) #1e=6
-#     parser.add_argument("--rollout-length", type=int, default=5) #1 
-#     parser.add_argument("--rollout-batch-size", type=int, default=50000) #50000
-#     parser.add_argument("--rollout-freq", type=int, default=1000)
-#     parser.add_argument("--model-retain-epochs", type=int, default=5)
-#     parser.add_argument("--real-ratio", type=float, default=0.05)
-#     parser.add_argument("--dynamics-model-dir", type=str, default=None)
-
-#     parser.add_argument("--epoch", type=int, default=1000) #1000
-#     parser.add_argument("--step-per-epoch", type=int, default=1000)
-#     parser.add_argument("--eval_episodes", type=int, default=10)
-#     parser.add_argument("--batch-size", type=int, default=256)
-#     parser.add_argument("--logdir", type=str, default="log")
-#     parser.add_argument("--log-freq", type=int, default=1000)
-#     parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu")
-
-#     #world transformer arguments
-#     parser.add_argument('-seq_dim', '--seq_dim', type=int, metavar='<dim>', default=12,
-#                         help='Specify the sequence dimension.')
-#     parser.add_argument('-output_dim', '--output_dim', type=int, metavar='<dim>', default=11*12,
-#                         help='Specify the sequence dimension.')
-#     parser.add_argument('-bc', '--bc', type=int, metavar='<size>', default=64,
-#                         help='Specify the batch size.')
-#     parser.add_argument('-nepochs', '--nepochs', type=int, metavar='<epochs>', default=20,
-#                         help='Specify the number of epochs to train for.')
-#     parser.add_argument('-encoder_size', '--encs', type=int, metavar='<size>', default=2,
-#                 help='Set the number of encoder layers.') 
-#     parser.add_argument('-lr', '--lr', type=float, metavar='<size>', default=0.001,
-#                         help='Specify the learning rate.')
-#     parser.add_argument('-encoder_dropout', '--encoder_dropout', type=float, metavar='<size>', default=0.1,
-#                 help='Set the tunable dropout.')
-#     parser.add_argument('-decoder_dropout', '--decoder_dropout', type=float, metavar='<size>', default=0,
-#                 help='Set the tunable dropout.')
-#     parser.add_argument('-dim_model', '--dim_model', type=int, metavar='<size>', default=256,
-#                 help='Set the number of encoder layers.')
-#     parser.add_argument('-path', '--path', type=str, metavar='<cohort>', 
-#                         default='/data/abiomed_tmp/processed',
-#                         help='Specify the path to read data.')
-#     parser.add_argument('-data_name', '--data_name', type=str, metavar='<size>', default='train',
-#                 help='which data to work on.')
-
-#     return parser.parse_args()
+def train(i, logger, run, env, dataset, model_logger, args, offline_buffer = None, ):
 
 
-def train(i, logger, run, model_logger, args, scaler_info, offline_buffer = None, ):
 
-
-# create env and dataset
-    if args.task == "Abiomed-v0":
-        # Register the environment only once
-        gym.envs.registration.register(
-            id='Abiomed-v0',
-            entry_point='abiomed_env:AbiomedEnv',  
-            max_episode_steps=1000,
-        )
-        # Build kwargs based on whether offline_buffer is provided
-        kwargs = {"args": args, "logger": logger, "scaler_info": scaler_info}
-        if offline_buffer is not None:
-            kwargs["offline_buffer"] = offline_buffer
-        env = gym.make(args.task, **kwargs)
-        # dataset = env.qlearning_dataset()
-        dataset = env.data
-        #save trained world model
-        # trained_w_m = env.world_model.trained_model
-        # torch.save(trained_w_m, os.path.join(model_logger.log_path, f'world_model_{i}.pth'))
-        with open(f'/data/abiomed_tmp/intermediate_data_uambpo/scale_info_{args.crps_scale}_{i}', 'wb') as f:
-            np.save(f, {'means':env.rwd_means, 'std':env.rwd_stds})
-    else:
-        env = gym.make(args.task)
-
-        dataset = d4rl.qlearning_dataset(env)
-    args.obs_shape = env.observation_space.shape
-    args.action_dim = np.prod(env.action_space.shape)    
-   
-
-    env.seed(args.seed)
     # if (i == 0) & (args.data_name == 'train'):
     #     data_save = env.data.copy()
     #     data_save['rewards'] = env.normalize_reward(data_save['rewards'])
