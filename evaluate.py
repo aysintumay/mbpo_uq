@@ -351,9 +351,9 @@ if __name__ == "__main__":
 
     set_device_and_logger(Devid, logger, model_logger)
 
-    with open(f'/data/abiomed_tmp/intermediate_data_uambpo/discounted_trainset.pkl', 'rb') as f:
+    with open(f'/data/abiomed_tmp/intermediate_data_uambpo/dataset_train_v_1.0_4.pkl', 'rb') as f:
         offline_buffer_train = pickle.load(f)
-    with open('/data/abiomed_tmp/intermediate_data_uambpo/discounted_testset.pkl', 'rb') as f:
+    with open('/data/abiomed_tmp/intermediate_data_uambpo/dataset_test_v_1.0_4.pkl', 'rb') as f:
         offline_buffer_test = pickle.load(f)
 
     stds = np.array([1.2599670e+01, 4.6925778e+02, 5.8842087e+01, 1.5025043e+01,
