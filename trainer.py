@@ -177,7 +177,7 @@ class Trainer:
             if not os.path.exists(model_save_dir):
                 os.makedirs(model_save_dir)
             torch.save(self.algo.policy.to('cpu').state_dict(), os.path.join(model_save_dir, f"policy_{self.env_name}_{self.iter}.pth")) #plot q_values for each epoch
-            print(util.device)
+            # print(util.device)
             self.algo.policy.to(util.device)        
         if self.run_id != 0: 
             plot_q_value(np.array(q1_l).reshape(-1,1), 'Q1')
@@ -199,49 +199,86 @@ class Trainer:
         
 
 
-    def _evaluate(self, world_model, crps_scale = 0):
+    def _evaluate(self, dataset, world_model, args):
 
-        #TODO: in progress
         self.algo.policy.eval()
         obs = self.eval_env.reset()
         eval_ep_info_buffer = []
         num_episodes = 0
         episode_reward, episode_length = 0, 0
-        obs_ = []
-        next_obs_ = []
-        action_ = []
-        full_action_ = []
-        reward_ = []
-        terminal_ = []
-        while num_episodes < self._eval_episodes:
-            action = self.algo.policy.sample_action(obs, deterministic=True)
-            next_obs, reward, terminal, _ = self.eval_env.step(action) #d4rl env
-            #predict next_obs
-            pred_input = torch.FloatTensor(np.concatenate([obs, action])).to(world_model.device)
+        obs_, next_obs_, action_, reward_, terminal_, raw_reward_ , std_list  = [],[],[],[],[],[],[]
+        
+        batch_size = 50
+        num_samples = 50
+        total_batches = len(dataset['observations']) // batch_size  
 
-            next_obs_mult = world_model.predict_multiple(pred_input, num_samples=50).cpu().numpy()
-            #calculate std over next_obs_mult
-            std = (next_obs_mult.std(axis=0)).mean().item()
-            penalized_reward = reward - crps_scale * std
+        # CHANGE:
+        for i in tqdm(range(total_batches)):
 
-            episode_reward += reward
-            episode_length += 1
+            start_idx = i * batch_size
+            end_idx = (i + 1) * batch_size
 
-            obs = next_obs
+            obs_batch = dataset['observations'][start_idx:end_idx]
+            action_batch = self.algo.policy.sample_action(obs_batch, deterministic=True)
+            #step does not support batch
+            
+            next_obs_batch = np.zeros_like(obs_batch)
+            reward_batch = np.zeros(batch_size)
+            terminal_batch = np.zeros(batch_size, dtype=bool)
+            info_batch = [{} for _ in range(batch_size)]
+            
+            # Step environment sequentially for each action in the batch
+            for j in range(batch_size):
+                # Process one environment step at a time
+                next_obs, reward, terminal, info = self.eval_env.step(action_batch[j])
+                
+                # Store results
+                next_obs_batch[j] = next_obs
+                reward_batch[j] = reward
+                terminal_batch[j] = terminal
+                info_batch[j] = info            #predict next_obs
 
-            if terminal:
-                eval_ep_info_buffer.append(
-                    {"episode_reward": episode_reward, "episode_length": episode_length}
-                )
-                num_episodes +=1
-                episode_reward, episode_length = 0, 0
-                obs = self.eval_env.reset()
+            states = np.repeat(obs_batch, num_samples, axis=0)
+            actions = np.repeat(action_batch, num_samples, axis=0)
 
-            obs_.append(list(obs[0]))
-            next_obs_.append(list(next_obs_mult.mean(axis=0).reshape(obs.shape)[0]))
-            action_.append(action)
-            reward_.append(penalized_reward)
-            terminal_.append(terminal)
+            pred_input = torch.FloatTensor(np.concatenate([states, actions],axis = 1)).to(world_model.device)
+
+            # next_obs_samples = world_model.model.predict_multiple(pred_input, num_samples)
+            next_obs_samples = world_model.model(pred_input).detach().cpu().numpy()        
+            # Reshape to [batch_size, num_samples, obs_dim]
+            obs_dim = obs_batch.shape[1]
+            next_obs_samples = next_obs_samples.reshape(batch_size, num_samples, obs_dim)
+            
+            next_obs_means = np.mean(next_obs_samples, axis=1)  # Shape: [batch_size, obs_dim]
+
+            # Calculate standard deviation across samples for each batch item
+            batch_stds = np.std(next_obs_samples, axis=1).mean(axis=1)
+
+            penalized_rewards = reward_batch - args.crps_scale * batch_stds
+        
+            # Track episode statistics
+            episode_reward += np.sum(penalized_rewards)
+            episode_length += batch_size
+        
+            obs_.extend(obs_batch)
+            next_obs_.extend(list(next_obs_means))
+            action_.extend(action_batch)
+            reward_.extend(penalized_rewards)
+            terminal_.extend(terminal_batch)
+
+            raw_reward_.extend(reward_batch)
+            std_list.extend(batch_stds)
+
+
+            # Record completed episodes
+            for term in terminal_batch:
+                if term:
+                    eval_ep_info_buffer.append({
+                        "episode_reward": episode_reward, 
+                        "episode_length": episode_length
+                    })
+                    episode_reward, episode_length = 0, 0
+
         dataset = {
                 'observations': np.array(obs_),
                 'actions': np.array(action_),  # Reshape to ensure it's 2D
@@ -249,10 +286,21 @@ class Trainer:
                 'terminals': np.array(terminal_),
                 'next_observations': np.array(next_obs_),
             }
+        
+        #rewards withput std penalty using D_1
+        with open(f'/data/abiomed_tmp/intermediate_data_uambpo/raw_rewards_{args.task}_{args.crps_scale}_{self.iter}.pkl', 'wb') as f:
+            np.save(f, np.array(raw_reward_))
+        #rewards with penalty using D_1
+        with open(f'/data/abiomed_tmp/intermediate_data_uambpo/rewards_{args.task}_{args.crps_scale}_{self.iter}.pkl', 'wb') as f:
+            np.save(f, np.array(reward_))
+        #save crps list
+        with open(f'/data/abiomed_tmp/intermediate_data_uambpo/std_list_{args.task}_{args.crps_scale}_{self.iter}.pkl', 'wb') as f:
+            np.save(f, np.array(std_list))
+        
         return {
             "eval/episode_reward": [ep_info["episode_reward"] for ep_info in eval_ep_info_buffer],
             "eval/episode_length": [ep_info["episode_length"] for ep_info in eval_ep_info_buffer]
-        },dataset
+        }, dataset
 
 
     def evaluate(self):
@@ -339,17 +387,14 @@ class Trainer:
                 break
         
         #rewards withput std penalty using D_1
-        with open(f'/data/abiomed_tmp/intermediate_data_uambpo/raw_rewards_{self.eval_env.crps_scale}_{self.iter}.pkl', 'wb') as f:
+        with open(f'/data/abiomed_tmp/intermediate_data_uambpo/raw_rewards_{self.eval_env.args.data_name}_{self.eval_env.crps_scale}_{self.iter}.pkl', 'wb') as f:
             np.save(f, np.array(raw_reward_))
         #rewards with penalty using D_1
-        with open(f'/data/abiomed_tmp/intermediate_data_uambpo/rewards_{self.eval_env.crps_scale}_{self.iter}.pkl', 'wb') as f:
+        with open(f'/data/abiomed_tmp/intermediate_data_uambpo/rewards_{self.eval_env.args.data_name}_{self.eval_env.crps_scale}_{self.iter}.pkl', 'wb') as f:
             np.save(f, np.array(reward_))
         #save crps list
-        with open(f'/data/abiomed_tmp/intermediate_data_uambpo/crps_list_{self.eval_env.crps_scale}_{self.iter}.pkl', 'wb') as f:
+        with open(f'/data/abiomed_tmp/intermediate_data_uambpo/std_list_{self.eval_env.args.data_name}_{self.eval_env.crps_scale}_{self.iter}.pkl', 'wb') as f:
             np.save(f, np.array(crps_list))
-        
-
-
         
 
         #need actions to be unnormalized for plotting

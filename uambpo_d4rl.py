@@ -16,14 +16,12 @@ from tqdm import tqdm
 from torch.utils.tensorboard import SummaryWriter
 
 
-from test import test
+from test_d4rl import test
 from train_d4rl import train
-from common.buffer import ReplayBuffer
-from scoring import convert_tfenvents_to_csv, merge_csv
 from common.logger import Logger
-from trainer import Trainer
 from common.util import set_device_and_logger
 from common import util
+from models.d4rl_world_model import D4RLWorldModel
 
 import warnings
 warnings.filterwarnings("ignore")
@@ -38,8 +36,7 @@ def main(args):
     # create env and dataset
   
     env = gym.make(args.task)
-
-    dataset = d4rl.qlearning_dataset(env)
+    d4rl.qlearning_dataset(env)
     args.obs_shape = env.observation_space.shape
     args.action_dim = np.prod(env.action_space.shape)    
    
@@ -67,32 +64,35 @@ def main(args):
     Devid = args.devid if args.device == 'cuda' else -1
     set_device_and_logger(Devid, logger, model_logger)
 
+    world_model = D4RLWorldModel(args.task)
+    world_model.load_model(args.world_model_path)
+
     results = []
 
     for i in np.arange(args.iter):
         start_time = time.time()
         print(f"====================Iteration {i+1}====================")
         if i == 0:
-        
-            with open(f'/data/abiomed_tmp/intermediate_data_d4rl/{args.task}_crps_discount_0.1.pkl', 'rb') as f:
+            with open(f'/data/abiomed_tmp/intermediate_data_d4rl/{args.task}_crps_discount_{args.discount_factor}.pkl', 'rb') as f:
                 offline_buffer_train = pickle.load(f)
+        #CHANGE
+        # offline_buffer_train = {key: offline_buffer_train[key][:1000] for key in offline_buffer_train.keys()}
 
         os.makedirs(model_logger.log_path, exist_ok=True)
 
         args.pretrained = True
-        # args.crps_scale = 1
     
         #train on offline dataset or replayed dataset
-        norm_info, trainer = train(i, logger, run, env, dataset, model_logger, args, norm_info, offline_buffer_train if offline_buffer_train is not None else None, )
+        trainer = train(i, logger, run, env, model_logger, args,offline_buffer_train if offline_buffer_train is not None else None, )
         
         #save the policy
         policy = trainer.algo.policy
         trainer.algo.save_dynamics_model(f"dynamics_model_{i}")
         
         if i == args.iter-1:
-            args.crps_scale = None
+            args.crps_scale = 0
 
-        trainer._eval_episodes = 50000
+        trainer._eval_episodes = len(offline_buffer_train['observations'])
         args.data_name = 'train'
 
         args.mode = 'offline'
@@ -100,72 +100,31 @@ def main(args):
 
         print('pretrained', args.pretrained, '\nstarted testing')
         print('log path ' , log_path)
-        dataset_train, _ = test(i, args, model_logger, norm_info, policy, trainer, offline_buffer_train if offline_buffer_train is not None else None, log_path)
+        dataset_train, eval_info = test(i,args,world_model, model_logger, policy, trainer, offline_buffer_train if offline_buffer_train is not None else None, log_path)
 
         #save the dataset
-        if not os.path.exists('/data/abiomed_tmp/intermediate_data_uambpo'):
-            os.makedirs('/data/abiomed_tmp/intermediate_data_uambpo')
-        with open(os.path.join('/data/abiomed_tmp/intermediate_data_uambpo',f'dataset_train_v_{args.crps_scale}_{i+1}.pkl'), 'wb') as f:
+        if not os.path.exists('/data/abiomed_tmp/intermediate_data_d4rl'):
+            os.makedirs('/data/abiomed_tmp/intermediate_data_d4rl')
+        with open(os.path.join('/data/abiomed_tmp/intermediate_data_d4rl',f'{args.task}_{args.crps_scale}_{i+1}.pkl'), 'wb') as f:
             pickle.dump(dataset_train, f)
 
-        #get renewed test dataset of 20k
-        trainer._eval_episodes = 30000
-        args.data_name = 'test'
-        args.mode = 'online'
-        args.pretrained = True
-        print( 'pretrained', args.pretrained, '\nstarted testing')
-
-        dataset_test, eval_info = test(i, args,model_logger,norm_info, policy, trainer, offline_buffer_test if offline_buffer_test is not None else None, log_path)
-        #save the dataset
-        with open(os.path.join('/data/abiomed_tmp/intermediate_data_uambpo',f'dataset_test_v_{args.crps_scale}_{i+1}.pkl'), 'wb') as f:
-            pickle.dump(dataset_test, f)
-
+        
         offline_buffer_train = dataset_train
-        offline_buffer_test = dataset_test
-
-        norm_info['scaler'] = None #RECALCULATE REWARD SCALER
 
         mean_return = np.mean(eval_info["eval/episode_reward"])
         std_return = np.std(eval_info["eval/episode_reward"])
         mean_length = np.mean(eval_info["eval/episode_length"])
         std_length = np.std(eval_info["eval/episode_length"])
 
-        if args.task == 'Abiomed-v0':
-            mean_accuracy = np.mean(eval_info["eval/episode_accuracy"])
-            std_accuracy = np.std(eval_info["eval/episode_accuracy"])
-            mean_1_off_accuracy = np.mean(eval_info["eval/episode_1_off_accuracy"])
-            std_1_off_accuracy = np.std(eval_info["eval/episode_1_off_accuracy"])
-            mean_1_mse = np.mean(eval_info["eval/mse"])
-            std_1_mse = np.std(eval_info["eval/mse"])
-
-            print(f"Iteration {i} - Seed {args.seed} - Accuracy: {mean_accuracy:.2f} ± {std_accuracy:.2f}")
-            print(f"Iteration {i} - Seed {args.seed} - 1-off Accuracy: {mean_1_off_accuracy:.2f} ± {std_1_off_accuracy:.2f}")
-            print(f"Iteration {i} - Seed {args.seed} - MSE: {mean_1_mse:.2f} ± {std_1_mse:.2f}")
-            wandb.log({
-                "mean_accuracy": mean_accuracy,
-                "std_accuracy": std_accuracy,
-                "mean_1_off_accuracy": mean_1_off_accuracy,
-                "std_1_off_accuracy": std_1_off_accuracy,
-                "mean_1_mse": mean_1_mse,
-                "std_1_mse": std_1_mse,
-                "seed": args.seed
-            })
-
-            results.append({
-                'seed': args.seed,
-                'mean_return': mean_return,
-                'std_return': std_return,
-                'mean_length': mean_length,
-                'std_length': std_length,
-                'mean_accuracy': mean_accuracy,
-                'std_accuracy': std_accuracy,
-                'mean_1_off_accuracy': mean_1_off_accuracy,
-                'std_1_off_accuracy': std_1_off_accuracy,
-                'mean_1_mse': mean_1_mse,
-                'std_1_mse': std_1_mse,
-                'iter': i
-            })
-            time_total = time.time() - start_time
+        results.append({
+            'seed': args.seed,
+            'mean_return': mean_return,
+            'std_return': std_return,
+            'mean_length': mean_length,
+            'std_length': std_length,
+            'iter': i
+        })
+        time_total = time.time() - start_time
         
         wandb.log({
             "mean_return": mean_return,
@@ -192,20 +151,20 @@ def get_args():
     # parser.add_argument("--task", type=str, default="walker2d-medium-replay-v2")
     parser.add_argument("--policy_path" , type=str, default="")
     parser.add_argument("--model_path" , type=str, default="saved_models")
-    # parser.add_argument('-cuda', '--cuda_number', type=str, metavar='<device>', default=2, #required=True,
-                        # help='Specify the CUDA device number to use.')
+    parser.add_argument('--world_model_path',type=str, default="saved_models/halfcheetah-random-v0/world_model_0.55.pth")
+
     parser.add_argument('-data_name', '--data_name', type=str, metavar='<size>', default='train',
                 help='which data to work on.')
     parser.add_argument(
                     "--devid", 
                     type=int,
-                    default=0,
+                    default=2,
                     help="Which GPU device index to use"
                 )
     parser.add_argument("--iter", type=int, default=3)
 
 
-    parser.add_argument("--task", type=str, default="Abiomed-v0")
+    parser.add_argument("--task", type=str, default="halfcheetah-random-v0")
     parser.add_argument("--seed", type=int, default=1)
     parser.add_argument("--actor-lr", type=float, default=3e-4)
     parser.add_argument("--critic-lr", type=float, default=3e-4)
@@ -229,13 +188,14 @@ def get_args():
     parser.add_argument("--dynamics-model-dir", type=str, default=None)
 
     parser.add_argument('--num_samples', type=int, default=50)
-    parser.add_argument('--crps_scale', type=float, default=None)
+    parser.add_argument('--crps_scale', type=float, default=0.05)
+    parser.add_argument('--discount_factor', type=float, default=0.1)
     # parser.add_argument('--iterations', type=int, default=4)
 
 
-    parser.add_argument("--epoch", type=int, default=50) #1000 #change
+    parser.add_argument("--epoch", type=int, default=100) #1000 #change
     parser.add_argument("--step-per-epoch", type=int, default=1000) # will be equated to #of samples in train and test #change
-    parser.add_argument("--eval_episodes", type=int, default=1000) # #change
+    parser.add_argument("--eval_episodes", type=int, default=10) # #change
     parser.add_argument("--batch-size", type=int, default=256)
     parser.add_argument("--terminal_counter", type=int, default=1) 
 

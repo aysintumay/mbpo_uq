@@ -29,7 +29,7 @@ def set_device_and_logger(gpu_id, logger_ent, logger_mod):
         device = torch.device("cpu")
     else:
         device = torch.device("cuda:{}".format(gpu_id))
-        os.environ['CUDA_VISIBLE_DEVICES'] = str(gpu_id)
+        # os.environ['CUDA_VISIBLE_DEVICES'] = str(gpu_id)
     print("setting device:", device)
     logger = logger_ent
     logger_model = logger_mod

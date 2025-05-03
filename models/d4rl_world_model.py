@@ -143,7 +143,7 @@ class D4RLWorldModel:
         
     def load_model(self, path):
         """Load model and normalizers"""
-        checkpoint = torch.load(path)
+        checkpoint = torch.load(path, map_location=f'{util.device}')
         self.model.load_state_dict(checkpoint['model_state_dict'])
         self.obs_normalizer = checkpoint['obs_normalizer']
         self.act_normalizer = checkpoint['act_normalizer']
@@ -171,7 +171,7 @@ class MLPNetwork(nn.Module):
     
     @torch.no_grad()
     def predict_multiple(self, x, num_samples=10):
-        input = torch.repeat(x, num_samples, 1)
+        input = torch.repeat(x, num_samples,1) #changed torch to numpy
         predictions = self.forward(input)
         return predictions.view(num_samples, -1)
     

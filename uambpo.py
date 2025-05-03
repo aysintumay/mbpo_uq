@@ -64,9 +64,9 @@ def main(args):
         print(f"====================Iteration {i+1}====================")
         if i == 0:
         
-            with open(f'/data/abiomed_tmp/intermediate_data_uambpo/discounted_trainset.pkl', 'rb') as f:
+            with open(f'/data/abiomed_tmp/intermediate_data_uambpo/discounted_trainset_{args.discount_factor}.pkl', 'rb') as f:
                 offline_buffer_train = pickle.load(f)
-            with open('/data/abiomed_tmp/intermediate_data_uambpo/discounted_testset.pkl', 'rb') as f:
+            with open(f'/data/abiomed_tmp/intermediate_data_uambpo/discounted_testset_{args.discount_factor}.pkl', 'rb') as f:
                 offline_buffer_test = pickle.load(f)
         
             stds = np.array([1.2599670e+01, 4.6925778e+02, 5.8842087e+01, 1.5025043e+01,
@@ -86,7 +86,6 @@ def main(args):
         args.pretrained = True
         args.data_name = 'train'  
 
-        # args.crps_scale = 1
     
         #train on offline dataset or replayed dataset
         norm_info, trainer = train(i, logger, run, model_logger, args, norm_info, offline_buffer_train if offline_buffer_train is not None else None, )
@@ -105,7 +104,7 @@ def main(args):
         trainer.algo.save_dynamics_model(f"dynamics_model_{i}")
         
         if i == args.iter-1:
-            args.crps_scale = None
+            args.crps_scale = 0
 
         trainer._eval_episodes = 49939
         args.data_name = 'train'
@@ -120,6 +119,7 @@ def main(args):
         #save the dataset
         if not os.path.exists('/data/abiomed_tmp/intermediate_data_uambpo'):
             os.makedirs('/data/abiomed_tmp/intermediate_data_uambpo')
+        
         with open(os.path.join('/data/abiomed_tmp/intermediate_data_uambpo',f'dataset_train_v_{args.crps_scale}_{i+1}.pkl'), 'wb') as f:
             pickle.dump(dataset_train, f)
 
@@ -244,8 +244,8 @@ def get_args():
     parser.add_argument("--dynamics-model-dir", type=str, default=None)
 
     parser.add_argument('--num_samples', type=int, default=50)
-    parser.add_argument('--crps_scale', type=float, default=None)
-    # parser.add_argument('--iterations', type=int, default=4)
+    parser.add_argument('--crps_scale', type=float, default=1)
+    parser.add_argument('--discount_factor', type=float, default=0.1)
 
 
     parser.add_argument("--epoch", type=int, default=50) #1000 #change

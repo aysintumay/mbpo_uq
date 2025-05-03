@@ -67,8 +67,6 @@ def _evaluate(policy, eval_env, episodes):
 
 def get_eval(policy, env, logger, trainer, args,):
 
-    reward_l, acc_l, off_acc = [], [], []
-    reward_std_l, acc_std_l, off_acc_std = [], [], []
 
     trainer.eval_env = env
     trainer.algo.policy = policy
@@ -78,7 +76,7 @@ def get_eval(policy, env, logger, trainer, args,):
     else:
 
         #TODO: add eval function for d4rl   
-        eval_info, dataset = _evaluate(policy, env, args.eval_episodes)
+        eval_info, dataset = trainer._evaluate(policy, env, args.eval_episodes)
 
 
     ep_reward_mean, ep_reward_std = np.mean(eval_info["eval/episode_reward"]), np.std(eval_info["eval/episode_reward"])
@@ -127,8 +125,6 @@ def get_eval(policy, env, logger, trainer, args,):
 
 def test(i, args, model_logger, norm_info, sac_policy, trainer, offline_buffer=None, log_path=None):
 
-
-    
 
     log_path = os.path.join(log_path, 'test',  f'ite_{i}', args.mode)
     writer = SummaryWriter(log_path)
