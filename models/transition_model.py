@@ -7,23 +7,23 @@ from operator import itemgetter
 from common.normalizer import StandardNormalizer
 from copy import deepcopy
 
-
 class TransitionModel:
     def __init__(self,
                  obs_space,
                  action_space,
                  static_fns,
                  lr,
+                 device = 'cpu',
                  holdout_ratio=0.1,
                  inc_var_loss=False,
                  use_weight_decay=False,
                  **kwargs):
-
+        
         obs_dim = obs_space.shape[0]
         action_dim = action_space.shape[0]
-
-        self.device = util.device
-        self.model = EnsembleModel(obs_dim=obs_dim, action_dim=action_dim, device=util.device, **kwargs['model'])
+        print('transition device', device)
+        self.device = device
+        self.model = EnsembleModel(obs_dim=obs_dim, action_dim=action_dim, device=self.device, **kwargs['model'])
         self.static_fns = static_fns
         self.lr = lr
 
@@ -49,11 +49,11 @@ class TransitionModel:
         reward_list = torch.Tensor(reward_list)
         delta_obs_list = next_obs_list - obs_list
         obs_list, action_list = self.transform_obs_action(obs_list, action_list)
-        model_input = torch.cat([obs_list, action_list], dim=-1).to(util.device)
+        model_input = torch.cat([obs_list, action_list], dim=-1).to(self.device)
         predictions = functional.minibatch_inference(args=[model_input], rollout_fn=self.model.predict,
                                                      batch_size=10000,
                                                      cat_dim=1)  # the inference size grows as model buffer increases
-        groundtruths = torch.cat((delta_obs_list, reward_list), dim=1).to(util.device)
+        groundtruths = torch.cat((delta_obs_list, reward_list), dim=1).to(self.device)
         eval_mse_losses, _ = self.model_loss(predictions, groundtruths, mse_only=True)
         if update_elite_models:
             elite_idx = np.argsort(eval_mse_losses.cpu().numpy())
@@ -74,6 +74,8 @@ class TransitionModel:
         return obs, action
 
     def update(self, data_batch):
+
+        
         obs_batch, action_batch, next_obs_batch, reward_batch = \
             itemgetter("observations", 'actions', 'next_observations', 'rewards')(data_batch)
         obs_batch = torch.Tensor(obs_batch)
@@ -85,11 +87,11 @@ class TransitionModel:
         obs_batch, action_batch = self.transform_obs_action(obs_batch, action_batch)
 
         # predict with model
-        model_input = torch.cat([obs_batch, action_batch], dim=-1).to(util.device)
+        model_input = torch.cat([obs_batch, action_batch], dim=-1).to(self.device)
         predictions = self.model.predict(model_input)
 
         # compute training loss
-        groundtruths = torch.cat((delta_obs_batch, reward_batch), dim=-1).to(util.device)
+        groundtruths = torch.cat((delta_obs_batch, reward_batch), dim=-1).to(self.device)
         train_mse_losses, train_var_losses = self.model_loss(predictions, groundtruths)
         train_mse_loss = torch.sum(train_mse_losses)
         train_var_loss = torch.sum(train_var_losses)
@@ -138,13 +140,13 @@ class TransitionModel:
             obs = obs[None, ]
             act = act[None, ]
         if not isinstance(obs, torch.Tensor):
-            obs = torch.FloatTensor(obs).to(util.device)
+            obs = torch.FloatTensor(obs).to(self.device)
         if not isinstance(act, torch.Tensor):
-            act = torch.FloatTensor(act).to(util.device)
+            act = torch.FloatTensor(act).to(self.device)
 
         scaled_obs, scaled_act = self.transform_obs_action(obs, act)
 
-        model_input = torch.cat([scaled_obs, scaled_act], dim=-1).to(util.device)
+        model_input = torch.cat([scaled_obs, scaled_act], dim=-1).to(self.device)
         pred_diff_means, pred_diff_logvars = self.model.predict(model_input)
         pred_diff_means = pred_diff_means.detach().cpu().numpy()
         # add curr obs for next obs
@@ -240,6 +242,6 @@ class TransitionModel:
         model_save_dir = os.path.join(util.logger_model.log_path, info)
         for network_name, network in self.networks.items():
             load_path = os.path.join(model_save_dir, network_name + ".pt")
-            state_dict = torch.load(load_path, map_location=f'{util.device}')
+            state_dict = torch.load(load_path, map_location=f'{self.device}')
             # print(f'trainsition model to {self.device}')
             return network.load_state_dict(state_dict)

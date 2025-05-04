@@ -85,9 +85,9 @@ def train(i, logger, run, model_logger, args, scaler_info, offline_buffer = None
         conditioned_sigma=True
     )
 
-    actor = ActorProb(actor_backbone, dist, util.device)
-    critic1 = Critic(critic1_backbone, util.device)
-    critic2 = Critic(critic2_backbone, util.device)
+    actor = ActorProb(actor_backbone, dist, args.device)
+    critic1 = Critic(critic1_backbone, args.device)
+    critic2 = Critic(critic2_backbone, args.device)
     actor_optim = torch.optim.Adam(actor.parameters(), lr=args.actor_lr)
     critic1_optim = torch.optim.Adam(critic1.parameters(), lr=args.critic_lr)
     critic2_optim = torch.optim.Adam(critic2.parameters(), lr=args.critic_lr)
@@ -98,7 +98,7 @@ def train(i, logger, run, model_logger, args, scaler_info, offline_buffer = None
         target_entropy = -np.prod(env.action_space.shape)
         args.target_entropy = target_entropy
 
-        log_alpha = torch.zeros(1, requires_grad=True, device=util.device)
+        log_alpha = torch.zeros(1, requires_grad=True, device=args.device)
         alpha_optim = torch.optim.Adam([log_alpha], lr=args.alpha_lr)
         args.alpha = (target_entropy, log_alpha, alpha_optim)
 
@@ -115,7 +115,7 @@ def train(i, logger, run, model_logger, args, scaler_info, offline_buffer = None
         tau=args.tau,
         gamma=args.gamma,
         alpha=args.alpha,
-        device=util.device
+        device=args.device
     )
 
     # create dynamics model
@@ -123,6 +123,7 @@ def train(i, logger, run, model_logger, args, scaler_info, offline_buffer = None
                                      action_space=env.action_space,
                                      static_fns=static_fns,
                                      lr=args.dynamics_lr,
+                                     device = args.device,
                                      **config["transition_params"]
                                      )    
       
@@ -136,7 +137,7 @@ def train(i, logger, run, model_logger, args, scaler_info, offline_buffer = None
         
         policy_state_dict = torch.load(os.path.join(model_logger.log_path, f'policy_{args.task}_{i-1}.pth'))
         sac_policy.load_state_dict(policy_state_dict)
-        sac_policy.to(util.device)
+        sac_policy.to(args.device)
         print(f'Policy loaded from {model_logger.log_path}!')
         # dynamics_model.load_model(f'dynamics_model_{i-1}') 
         

@@ -20,7 +20,7 @@ from test_d4rl import test
 from train_d4rl import train
 from common.logger import Logger
 from common.util import set_device_and_logger
-from common import util
+# from common import util
 from models.d4rl_world_model import D4RLWorldModel
 
 import warnings
@@ -62,10 +62,10 @@ def main(args):
     model_logger = Logger(writer=writer,log_path=model_path)
 
     Devid = args.devid if args.device == 'cuda' else -1
-    set_device_and_logger(Devid, logger, model_logger)
-
-    world_model = D4RLWorldModel(args.task)
-    world_model.load_model(args.world_model_path)
+    device_model = set_device_and_logger(Devid, logger, model_logger)
+    args.device = device_model
+    world_model = D4RLWorldModel(args.task, device = args.device)
+    world_model.load_model(args.world_model_path, )
 
     results = []
 
@@ -92,7 +92,7 @@ def main(args):
         if i == args.iter-1:
             args.crps_scale = 0
 
-        trainer._eval_episodes = len(offline_buffer_train['observations'])
+        # trainer._eval_episodes = len(offline_buffer_train['observations'])
         args.data_name = 'train'
 
         args.mode = 'offline'
@@ -158,7 +158,7 @@ def get_args():
     parser.add_argument(
                     "--devid", 
                     type=int,
-                    default=2,
+                    default=4,
                     help="Which GPU device index to use"
                 )
     parser.add_argument("--iter", type=int, default=3)

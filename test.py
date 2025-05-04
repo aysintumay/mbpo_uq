@@ -21,7 +21,6 @@ from common.buffer import ReplayBuffer
 from common.logger import Logger
 from trainer import Trainer,plot_accuracy
 from common.util import set_device_and_logger
-from common import util
 # from trainer import _evaluate, evaluate
 
 

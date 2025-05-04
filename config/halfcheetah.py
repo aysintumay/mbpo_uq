@@ -1,6 +1,6 @@
 default_config = {
     "transition_params": {
-        "model_batch_size": 256,
+        "model_batch_size": 2048,
         "use_weight_decay": True,
         "optimizer_class": "Adam",
         "learning_rate": 0.001,

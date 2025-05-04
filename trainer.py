@@ -6,7 +6,7 @@ import torch
 from matplotlib import pyplot as plt
 
 from tqdm import tqdm
-
+import copy 
 from common import util
 
 
@@ -176,9 +176,9 @@ class Trainer:
             model_save_dir = util.logger_model.log_path
             if not os.path.exists(model_save_dir):
                 os.makedirs(model_save_dir)
-            torch.save(self.algo.policy.to('cpu').state_dict(), os.path.join(model_save_dir, f"policy_{self.env_name}_{self.iter}.pth")) #plot q_values for each epoch
-            # print(util.device)
-            self.algo.policy.to(util.device)        
+            policy_copy = copy.deepcopy(self.algo.policy)
+            torch.save(policy_copy.to('cpu').state_dict(), os.path.join(model_save_dir, f"policy_{self.env_name}_{self.iter}.pth")) #plot q_values for each epoch
+                   
         if self.run_id != 0: 
             plot_q_value(np.array(q1_l).reshape(-1,1), 'Q1')
             plot_q_value(np.array(q2_l).reshape(-1,1), 'Q2')
@@ -194,7 +194,6 @@ class Trainer:
             plot_accuracy(np.array(acc_l), np.array(acc_std_l)/self._eval_episodes, 'Accuracy')
             plot_accuracy(np.array(off_acc), np.array(off_acc_std)/self._eval_episodes, '1-off Accuracy')
 
-        # self.algo.policy.to(util.device)
         self.logger.print("total time: {:.3f}s".format(time.time() - start_time))
         
 
@@ -249,7 +248,8 @@ class Trainer:
             obs_dim = obs_batch.shape[1]
             next_obs_samples = next_obs_samples.reshape(batch_size, num_samples, obs_dim)
             
-            next_obs_means = np.mean(next_obs_samples, axis=1)  # Shape: [batch_size, obs_dim]
+            next_obs_means = world_model.predict(states, actions)
+            # next_obs_means = np.mean(next_obs_samples, axis=1)  # Shape: [batch_size, obs_dim]
 
             # Calculate standard deviation across samples for each batch item
             batch_stds = np.std(next_obs_samples, axis=1).mean(axis=1)
@@ -288,13 +288,13 @@ class Trainer:
             }
         
         #rewards withput std penalty using D_1
-        with open(f'/data/abiomed_tmp/intermediate_data_uambpo/raw_rewards_{args.task}_{args.crps_scale}_{self.iter}.pkl', 'wb') as f:
+        with open(f'/data/abiomed_tmp/intermediate_data_d4rl/raw_rewards_{args.task}_{args.crps_scale}_{self.iter}.pkl', 'wb') as f:
             np.save(f, np.array(raw_reward_))
         #rewards with penalty using D_1
-        with open(f'/data/abiomed_tmp/intermediate_data_uambpo/rewards_{args.task}_{args.crps_scale}_{self.iter}.pkl', 'wb') as f:
+        with open(f'/data/abiomed_tmp/intermediate_data_d4rl/rewards_{args.task}_{args.crps_scale}_{self.iter}.pkl', 'wb') as f:
             np.save(f, np.array(reward_))
         #save crps list
-        with open(f'/data/abiomed_tmp/intermediate_data_uambpo/std_list_{args.task}_{args.crps_scale}_{self.iter}.pkl', 'wb') as f:
+        with open(f'/data/abiomed_tmp/intermediate_data_d4rl/std_list_{args.task}_{args.crps_scale}_{self.iter}.pkl', 'wb') as f:
             np.save(f, np.array(std_list))
         
         return {

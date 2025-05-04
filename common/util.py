@@ -33,6 +33,7 @@ def set_device_and_logger(gpu_id, logger_ent, logger_mod):
     print("setting device:", device)
     logger = logger_ent
     logger_model = logger_mod
+    return device
 
 
 def relative_path_to_module_path(relative_path):

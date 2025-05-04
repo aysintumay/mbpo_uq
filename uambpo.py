@@ -55,7 +55,8 @@ def main(args):
     model_logger = Logger(writer=writer,log_path=model_path)
 
     Devid = args.devid if args.device == 'cuda' else -1
-    set_device_and_logger(Devid, logger, model_logger)
+    device_model = set_device_and_logger(Devid, logger, model_logger)
+    args.device = device_model
 
     results = []
 

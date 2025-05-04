@@ -143,7 +143,7 @@ class D4RLWorldModel:
         
     def load_model(self, path):
         """Load model and normalizers"""
-        checkpoint = torch.load(path, map_location=f'{util.device}')
+        checkpoint = torch.load(path, map_location=f'{self.device}')
         self.model.load_state_dict(checkpoint['model_state_dict'])
         self.obs_normalizer = checkpoint['obs_normalizer']
         self.act_normalizer = checkpoint['act_normalizer']

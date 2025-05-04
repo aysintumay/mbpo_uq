@@ -45,9 +45,9 @@ def get_mopo():
         conditioned_sigma=True
     )
 
-    actor = ActorProb(actor_backbone, dist, util.device)
-    critic1 = Critic(critic1_backbone, util.device)
-    critic2 = Critic(critic2_backbone, util.device)
+    actor = ActorProb(actor_backbone, dist, args.device)
+    critic1 = Critic(critic1_backbone, args.device)
+    critic2 = Critic(critic2_backbone, args.device)
     actor_optim = torch.optim.Adam(actor.parameters(), lr=args.actor_lr)
     critic1_optim = torch.optim.Adam(critic1.parameters(), lr=args.critic_lr)
     critic2_optim = torch.optim.Adam(critic2.parameters(), lr=args.critic_lr)
@@ -58,7 +58,7 @@ def get_mopo():
         target_entropy = -np.prod(env.action_space.shape)
         args.target_entropy = target_entropy
 
-        log_alpha = torch.zeros(1, requires_grad=True, device=util.device)
+        log_alpha = torch.zeros(1, requires_grad=True, device=args.device)
         alpha_optim = torch.optim.Adam([log_alpha], lr=args.alpha_lr)
         args.alpha = (target_entropy, log_alpha, alpha_optim)
 
@@ -75,7 +75,7 @@ def get_mopo():
         tau=args.tau,
         gamma=args.gamma,
         alpha=args.alpha,
-        device=util.device
+        device=args.device
     )
     
     return sac_policy
@@ -242,7 +242,7 @@ def mopo_args(parser):
     g.add_argument("--model-retain-epochs", type=int, default=5)
     g.add_argument("--real-ratio", type=float, default=0.05)
     g.add_argument("--dynamics-model-dir", type=str, default=None)
-
+    g.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu")
     g.add_argument("--epoch", type=int, default=600) #1000
     g.add_argument("--step-per-epoch", type=int, default=1000) 
     #1000

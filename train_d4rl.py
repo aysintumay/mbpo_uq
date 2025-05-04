@@ -20,22 +20,12 @@ from algo.mopo import MOPO
 from common.buffer import ReplayBuffer
 from common.logger import Logger
 from trainer import Trainer
-from common.util import set_device_and_logger
 from common import util
 from abiomed_env import AbiomedEnv
 
 
 
 def train(i, logger, run, env, model_logger, args, dataset = None, ):
-
-
-
-    # if (i == 0) & (args.data_name == 'train'):
-    #     data_save = env.data.copy()
-    #     data_save['rewards'] = env.normalize_reward(data_save['rewards'])
-        
-    #     with open(os.path.join('/data/abiomed_tmp/intermediate_data_uambpo',f'dataset_train_0.pkl'), 'wb') as f:
-    #         pickle.dump(data_save, f)
 
 
     # import configs
@@ -57,9 +47,9 @@ def train(i, logger, run, env, model_logger, args, dataset = None, ):
         conditioned_sigma=True
     )
 
-    actor = ActorProb(actor_backbone, dist, util.device)
-    critic1 = Critic(critic1_backbone, util.device)
-    critic2 = Critic(critic2_backbone, util.device)
+    actor = ActorProb(actor_backbone, dist, args.device)
+    critic1 = Critic(critic1_backbone, args.device)
+    critic2 = Critic(critic2_backbone, args.device)
     actor_optim = torch.optim.Adam(actor.parameters(), lr=args.actor_lr)
     critic1_optim = torch.optim.Adam(critic1.parameters(), lr=args.critic_lr)
     critic2_optim = torch.optim.Adam(critic2.parameters(), lr=args.critic_lr)
@@ -70,7 +60,7 @@ def train(i, logger, run, env, model_logger, args, dataset = None, ):
         target_entropy = -np.prod(env.action_space.shape)
         args.target_entropy = target_entropy
 
-        log_alpha = torch.zeros(1, requires_grad=True, device=util.device)
+        log_alpha = torch.zeros(1, requires_grad=True, device=args.device)
         alpha_optim = torch.optim.Adam([log_alpha], lr=args.alpha_lr)
         args.alpha = (target_entropy, log_alpha, alpha_optim)
 
@@ -87,7 +77,7 @@ def train(i, logger, run, env, model_logger, args, dataset = None, ):
         tau=args.tau,
         gamma=args.gamma,
         alpha=args.alpha,
-        device=util.device
+        device=args.device
     )
 
     # create dynamics model
@@ -95,6 +85,7 @@ def train(i, logger, run, env, model_logger, args, dataset = None, ):
                                      action_space=env.action_space,
                                      static_fns=static_fns,
                                      lr=args.dynamics_lr,
+                                     device = args.device,
                                      **config["transition_params"]
                                      )    
       
@@ -102,13 +93,13 @@ def train(i, logger, run, env, model_logger, args, dataset = None, ):
     if i == 0:
       
         print('Policy to be trained!')
-        
     else:
         # load offline buffer
         
         policy_state_dict = torch.load(os.path.join(model_logger.log_path, f'policy_{args.task}_{i-1}.pth'))
         sac_policy.load_state_dict(policy_state_dict)
-        sac_policy.to(util.device)
+        
+        sac_policy.to(args.device)
         print(f'Policy loaded from {model_logger.log_path}!')
         # dynamics_model.load_model(f'dynamics_model_{i-1}') 
       
@@ -152,7 +143,6 @@ def train(i, logger, run, env, model_logger, args, dataset = None, ):
     # create trainer
     trainer = Trainer(
         algo,
-        # world_model,
         eval_env=env,
         epoch=args.epoch,
         step_per_epoch=args.step_per_epoch,
@@ -163,9 +153,7 @@ def train(i, logger, run, env, model_logger, args, dataset = None, ):
         env_name = args.task,
         eval_episodes=args.eval_episodes,
         terminal_counter= args.terminal_counter if args.task == "Abiomed-v0" else None,
-        ite = i
-
-        
+        ite = i  
     )
 
     # pretrain dynamics model on the whole dataset

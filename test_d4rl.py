@@ -22,45 +22,6 @@ from common.logger import Logger
 from trainer import Trainer,plot_accuracy
 from common.util import set_device_and_logger
 from common import util
-# from trainer import _evaluate, evaluate
-
-
-
-
-def _evaluate(policy, eval_env, episodes):
-        policy.eval()
-        obs = eval_env.reset()
-        eval_ep_info_buffer = []
-        num_episodes = 0
-        episode_reward, episode_length = 0, 0
-
-        while num_episodes < episodes:
-            action = policy.sample_action(obs, deterministic=True)
-            next_obs, reward, terminal, _ = eval_env.step(action)
-            episode_reward += reward
-            episode_length += 1
-
-            obs = next_obs
-
-            if terminal:
-                eval_ep_info_buffer.append(
-                    {"episode_reward": episode_reward, "episode_length": episode_length}
-                )
-
-                #d4rl don't have REF_MIN_SCORE and REF_MAX_SCORE for v2 environments
-                dset_name = eval_env.unwrapped.spec.name+'-v0'
-                print(d4rl.get_normalized_score(dset_name, np.array(episode_reward))*100)
-
-                num_episodes +=1
-                episode_reward, episode_length = 0, 0
-                obs = eval_env.reset()
-
-        return {
-            "eval/episode_reward": [ep_info["episode_reward"] for ep_info in eval_ep_info_buffer],
-            "eval/episode_length": [ep_info["episode_length"] for ep_info in eval_ep_info_buffer]
-        }
-
-
 
 
 
@@ -78,13 +39,13 @@ def get_eval(policy, world_model,  env, logger, trainer, args, data):
     ep_length_mean, ep_length_std = np.mean(eval_info["eval/episode_length"]), np.std(eval_info["eval/episode_length"])
     logger.print(f"episode_reward: {ep_reward_mean:.3f} ± {ep_reward_std:.3f},\
                             episode_length: {ep_length_mean:.3f} ± {ep_length_std:.3f}")
-    # logger.record("eval/episode_reward", ep_reward_mean, args.eval_episodes, printed=False)
+    logger.record("eval/episode_reward", ep_reward_mean, args.eval_episodes, printed=False)
    
 
     dset_name = env.unwrapped.spec.name+'-v0'
     normalized_score_mean = d4rl.get_normalized_score(dset_name, ep_reward_mean)*100
     normalized_score_std = d4rl.get_normalized_score(dset_name, ep_reward_std)*100
-    # logger.record("normalized_episode_reward", normalized_score_mean, ep_length_mean, printed=False)
+    logger.record("normalized_episode_reward", normalized_score_mean, ep_length_mean, printed=False)
     logger.print(f"normalized_episode_reward: {normalized_score_mean:.3f} ± {normalized_score_std:.3f},\
                         episode_length: {ep_length_mean:.3f} ± {ep_length_std:.3f}")
     

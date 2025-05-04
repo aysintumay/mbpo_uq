@@ -1,0 +1,1 @@
+episode_reward: -18.437 ± 1.995,                            episode_length: 1.000 ± 0.000,                            episode_accuracy: 0.103 ± 0.301,                            episode_1_off_accuracy: 0.367 ± 0.479,                            episode_1_mse: 3.315 ± 2.335
