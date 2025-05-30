@@ -236,7 +236,7 @@ def get_args():
     parser.add_argument("--dynamics-lr", type=float, default=0.001)
     parser.add_argument("--n-ensembles", type=int, default=7)
     parser.add_argument("--n-elites", type=int, default=5)
-    parser.add_argument("--reward-penalty-coef", type=float, default=1) #1e=6
+    parser.add_argument("--reward-penalty-coef", type=float, default=0) #1e=6
     parser.add_argument("--rollout-length", type=int, default=3) #1 
     parser.add_argument("--rollout-batch-size", type=int, default=5000) #50000
     parser.add_argument("--rollout-freq", type=int, default=1000)

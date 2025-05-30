@@ -193,6 +193,8 @@ def evaluate(policy, eval_env, eval_episodes, _terminal_counter):
 
 def get_env(offline_buffer_train=None, offline_buffer_test=None, norm_info=None):
 
+    if norm_info is None:    
+        norm_info = {'rwd_stds':None, 'rwd_means':None, 'scaler': None}
     args.data_name = 'train' #to obtain norm_info
     # norm_info = {'rwd_stds': None, 'rwd_means':None, 'scaler': None}
  
@@ -283,12 +285,11 @@ if __name__ == "__main__":
     parser.add_argument("--seed", type=int, default=1)
     
     parser.add_argument("--eval_episodes", type=int, default=1000)
-    parser.add_argument("--crps_scale", type=bool, default=None)
-    
+    parser.add_argument('--crps_scale', type=float, default=1)
+
     parser.add_argument("--terminal_counter", type=int, default=1) 
     parser.add_argument("--logdir", type=str, default="log")
     parser.add_argument("--log-freq", type=int, default=1000)
-    parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu")
     
 
     #world transformer arguments
@@ -351,29 +352,27 @@ if __name__ == "__main__":
 
     set_device_and_logger(Devid, logger, model_logger)
 
-    with open(f'/data/abiomed_tmp/intermediate_data_uambpo/dataset_train_v_1.0_4.pkl', 'rb') as f:
-        offline_buffer_train = pickle.load(f)
-    with open('/data/abiomed_tmp/intermediate_data_uambpo/dataset_test_v_1.0_4.pkl', 'rb') as f:
-        offline_buffer_test = pickle.load(f)
+#     with open(f'/data/abiomed_tmp/intermediate_data_uambpo/dataset_train_v_1.0_4.pkl', 'rb') as f:
+#         offline_buffer_train = pickle.load(f)
+#     with open('/data/abiomed_tmp/intermediate_data_uambpo/dataset_test_v_1.0_4.pkl', 'rb') as f:
+#         offline_buffer_test = pickle.load(f)
 
-    stds = np.array([1.2599670e+01, 4.6925778e+02, 5.8842087e+01, 1.5025043e+01,
-1.5730153e+01, 2.3981575e+01, 1.2024239e+01, 2.2280893e+01,
-1.7170943e+02, 1.7599674e+01, 1.9673981e-01, 1.4662008e+01,
-2.1159306e+00])
+#     stds = np.array([1.2599670e+01, 4.6925778e+02, 5.8842087e+01, 1.5025043e+01,
+# 1.5730153e+01, 2.3981575e+01, 1.2024239e+01, 2.2280893e+01,
+# 1.7170943e+02, 1.7599674e+01, 1.9673981e-01, 1.4662008e+01,
+# 2.1159306e+00])
     
-    means = np.array([7.3452431e+01, 3.9981541e+03, 2.8203378e+02, 3.9766106e+01,
-1.0223494e+01, 9.2290756e+01, 6.1786270e+01, 3.2400185e+01,
-6.0808063e+02, 8.4936722e+01, 6.1181599e-01, 6.5555145e+01,
-6.0715165e+00])
+#     means = np.array([7.3452431e+01, 3.9981541e+03, 2.8203378e+02, 3.9766106e+01,
+# 1.0223494e+01, 9.2290756e+01, 6.1786270e+01, 3.2400185e+01,
+# 6.0808063e+02, 8.4936722e+01, 6.1181599e-01, 6.5555145e+01,
+# 6.0715165e+00])
 
-    scaler_info = {'rwd_stds':stds, 'rwd_means':means, 'scaler': None}
+#     scaler_info = {'rwd_stds':stds, 'rwd_means':means, 'scaler': None}
     
-    #if you saved the whole model: policy = torch.load(os.path.join(model_logger.log_path, f'policy_{args.task}.pth'))
-    env = get_env(offline_buffer_train, offline_buffer_test, scaler_info) 
-    #if you saved the state_dict define the model class and load the model : write your own function
+    # env = get_env(offline_buffer_train, offline_buffer_test, scaler_info) 
+    env = get_env() 
     policy = get_mopo()
-    #change the policy path
-    #load the state_dict and model
+   
     policy_state_dict = torch.load(args.policy_path, map_location=f'cuda')
     policy.load_state_dict(policy_state_dict)
 

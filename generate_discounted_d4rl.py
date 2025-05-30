@@ -15,13 +15,16 @@ model_paths = {
     'halfcheetah-expert-v0': "saved_models/halfcheetah-expert-v0/world_model_0.63.pth",
     'walker2d-random-v0': "saved_models/walker2d-random-v0/world_model_0.86.pth",
     'walker2d-expert-v0': "saved_models/walker2d-expert-v0/world_model_0.57.pth",
+    "maze2d-umaze-v1": "saved_models/maze2d-umaze-v1/world_model_0.01.pth", #256
+    "maze2d-umaze-v1_noisy": "saved_models/maze2d-umaze-v1_noisy/world_model_2.01.pth" #512
+
 }
 
 
 def get_crps_list(env_name, discount_factor, device):
 
     print(f"Starting CRPS list for {env_name} with discount {discount_factor}")
-    model = D4RLWorldModel(env_name, device=device)
+    model = D4RLWorldModel(env_name, device=device, hidden_dim = 256)
     model_path = model_paths[env_name]
     model.load_model(model_path)
     model.model.to(device)
@@ -76,10 +79,11 @@ def get_crps_list(env_name, discount_factor, device):
     crps_list = np.array(crps_list)
     print(crps_list.shape)
 
+    print("MEAN CRPS OVER SAMPLES:", crps_list.mean())
     # verify crps_list is the same length as the dataset
     assert len(crps_list) == len(dataset['observations']), "crps_list is not the same length as the dataset"
     
-    np.save(f'/data/abiomed_tmp/intermediate_data_d4rl/{env_name}_crps_list.npy', crps_list)
+    np.save(f'/abiomed_tmp/intermediate_data_d4rl/{env_name}_crps_list.npy', crps_list)
 
 
     discounted_dataset = {
@@ -91,7 +95,7 @@ def get_crps_list(env_name, discount_factor, device):
         'actions': dataset['actions'], 
     }
 
-    with open(f"/data/abiomed_tmp/intermediate_data_d4rl/{env_name}_crps_discount_{discount_factor}.pkl", "wb") as f:
+    with open(f"/abiomed-tmp/intermediate_data_d4rl/{env_name}_crps_discount_{discount_factor}.pkl", "wb") as f:
         pickle.dump(discounted_dataset, f)
     
     print(f"Saved discounted dataset for {env_name} with discount {discount_factor}")

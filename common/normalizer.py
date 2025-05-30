@@ -64,7 +64,7 @@ class StandardNormalizer(object):
         self.tot_count += sample_count
 
     def transform(self, data):
-        return data
+        # return data
         """Transforms the input matrix data using the parameters of this scaler.
 
         Arguments:
@@ -80,7 +80,7 @@ class StandardNormalizer(object):
             return (data - np.array(self.mean)) / np.sqrt(np.array(self.var))
 
     def inverse_transform(self, data):
-        return data
+        # return data
         if self.mean is None or self.var is None:
             return data
         if isinstance(data, torch.Tensor):

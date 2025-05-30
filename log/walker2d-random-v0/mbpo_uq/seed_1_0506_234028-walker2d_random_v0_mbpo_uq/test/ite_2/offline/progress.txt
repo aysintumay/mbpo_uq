@@ -1,0 +1,2 @@
+episode_reward: 0.883 ± 7.939,                            episode_length: 1.000 ± 7.000
+normalized_episode_reward: -0.016 ± 0.137,                        episode_length: 1.000 ± 7.000

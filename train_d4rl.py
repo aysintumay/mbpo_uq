@@ -25,7 +25,7 @@ from abiomed_env import AbiomedEnv
 
 
 
-def train(i, logger, run, env, model_logger, args, dataset = None, ):
+def train(i, logger, run, env, args, dataset = None, ):
 
 
     # import configs
@@ -90,18 +90,18 @@ def train(i, logger, run, env, model_logger, args, dataset = None, ):
                                      )    
       
 
-    if i == 0:
+    # if i == 0:
       
-        print('Policy to be trained!')
-    else:
-        # load offline buffer
+    #     print('Policy to be trained!')
+    # else:
+    #     # load offline buffer
         
-        policy_state_dict = torch.load(os.path.join(model_logger.log_path, f'policy_{args.task}_{i-1}.pth'))
-        sac_policy.load_state_dict(policy_state_dict)
+    #     policy_state_dict = torch.load(os.path.join(model_logger.log_path, f'policy_{args.task}_{i-1}.pth'))
+    #     sac_policy.load_state_dict(policy_state_dict)
         
-        sac_policy.to(args.device)
-        print(f'Policy loaded from {model_logger.log_path}!')
-        # dynamics_model.load_model(f'dynamics_model_{i-1}') 
+    #     sac_policy.to(args.device)
+    #     print(f'Policy loaded from {model_logger.log_path}!')
+    #     # dynamics_model.load_model(f'dynamics_model_{i-1}') 
       
 
     offline_buffer = ReplayBuffer(

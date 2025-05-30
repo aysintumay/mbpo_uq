@@ -13,12 +13,8 @@ import gym
 import d4rl
 import numpy as np
 import torch
-from torch.utils.tensorboard import SummaryWriter
-from models.transition_model import TransitionModel
 from models.policy_models import MLP, ActorProb, Critic, DiagGaussian
 from algo.sac import SACPolicy
-from algo.mopo import MOPO
-from common.buffer import ReplayBuffer
 from common.logger import Logger
 from common.util import set_device_and_logger
 from common import util
@@ -169,7 +165,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         # keep the base flags and auto‐help
         parents=[base],
-        description="Train your RL method"
+        description="Test your RL method"
     )
 
     # parser.add_argument("--algo-name", type=str, default="mbpo")
@@ -193,7 +189,7 @@ if __name__ == "__main__":
     parser.add_argument("--terminal_counter", type=int, default=1) 
     parser.add_argument("--logdir", type=str, default="log")
     parser.add_argument("--log-freq", type=int, default=1000)
-    parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu")
+    # parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu")
     
 
     #world transformer arguments
@@ -246,22 +242,22 @@ if __name__ == "__main__":
     log_path = os.path.join(args.logdir, args.task, args.algo_name, log_file)
 
     model_path = os.path.join(args.model_path, args.task, args.algo_name, log_file)
-    writer = SummaryWriter(log_path)
-    writer.add_text("args", str(args))
-    logger = Logger(writer=writer,log_path=log_path)
-    model_logger = Logger(writer=writer,log_path=model_path)
+    # writer = SummaryWriter(log_path)
+    # writer.add_text("args", str(args))
+    # logger = Logger(writer=writer,log_path=log_path)
+    # model_logger = Logger(writer=writer,log_path=model_path)
 
-    Devid = args.devid if args.device == 'cuda' else -1
+    # Devid = args.devid if args.device == 'cuda' else -1
+    args.device = f'cuda:{args.devid}'
 
-
-    set_device_and_logger(Devid, logger, model_logger)
+    # args.device = set_device_and_logger(Devid, logger, model_logger)
     
     env = get_env() 
     policy = get_mopo()
 
-    policy_state_dict = torch.load(args.policy_path, map_location=f'cuda')
+    policy_state_dict = torch.load(args.policy_path, map_location=args.device)
+    
     policy.load_state_dict(policy_state_dict)
-
     eval_info = _evaluate(policy, env, args.eval_episodes) 
     mean_return = np.mean(eval_info["eval/episode_reward"])
     std_return = np.std(eval_info["eval/episode_reward"])

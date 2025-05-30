@@ -15,6 +15,9 @@ import argparse
 import logging
 
 from common import util
+import random
+from common.logger import Logger
+from common.util import set_device_and_logger
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -110,10 +113,6 @@ class WorldTransformer:
             horizon = 90
 
         x_n = (dta - self.rwd_mean) / self.rwd_std
-
-        # if dataset:
-        #     dta[:,:,-1] = (dataset['actions'].repeat(180).reshape(-1,90) - means[-1])/ stds[-1]
-        #     dta[:,90:,:-1] = dataset['next_observations'].reshape(-1,90,12)
     
         x, pl, y = self.prep_transformer_world(x_n, ts= horizon+1, dims = 12)
         print("plshape is ", pl.shape)
@@ -384,11 +383,7 @@ if __name__ == "__main__":
     
 
     args = parser.parse_args()
-    import random
-    from torch.utils.tensorboard import SummaryWriter
-    from common.logger import Logger
-    from common.util import set_device_and_logger
-
+    
     random.seed(args.seed)
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)

@@ -5,13 +5,16 @@ import numpy as np
 import gym
 import d4rl
 import argparse
-
+import pickle
 import sys
 import os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from common.normalizer import StandardNormalizer
 from common import util
 
+def set_global_device(dev):
+    global device
+    device = torch.device(dev)
 
 class D4RLWorldModel:
     def __init__(self,
@@ -22,8 +25,11 @@ class D4RLWorldModel:
                  dataset=None,
                  load_data = True,
                  epochs = 50,
+                 hidden_dim=512,
+                #  args=None,
                  **kwargs):
         
+        # device = args.device
         self.env = gym.make(env_name)
 
         if load_data:
@@ -32,16 +38,20 @@ class D4RLWorldModel:
             else:
                 self.dataset = dataset
             print("loaded dataset")
-        util.set_global_device(device)
+        set_global_device(device)
+        util.device = device
+
 
         self.epochs = epochs
         self.obs_dim = self.env.observation_space.shape[0]
         self.action_dim = self.env.action_space.shape[0]
         self.device = device
+        print(f"Using device: {self.device}")
         
         # Initialize model
         self.model = MLPNetwork(obs_dim=self.obs_dim, 
                               action_dim=self.action_dim, 
+                              hidden_dim=hidden_dim,
                               device=self.device)
     
         # Initialize optimizers
@@ -64,19 +74,22 @@ class D4RLWorldModel:
         train_n = int(n * (1 - self.holdout_ratio))
         
         # Normalize data
-        obs = torch.FloatTensor(data['observations']).to(self.device)
-        actions = torch.FloatTensor(data['actions']).to(self.device)
-        next_obs = torch.FloatTensor(data['next_observations']).to(self.device)
+        obs = torch.FloatTensor(data['observations'][:train_n]).to(self.device)
+        actions = torch.FloatTensor(data['actions'][:train_n]).to(self.device)
+        next_obs = torch.FloatTensor(data['next_observations'][:train_n]).to(self.device)
         
+        if not args.noisy:
+            print("normalize train data")
         # Update normalizers
-        self.obs_normalizer.update(obs)
-        self.act_normalizer.update(actions)
-        
-        # Transform data
-        obs = self.obs_normalizer.transform(obs)
-        actions = self.act_normalizer.transform(actions)
-        
-        # make torch dataset and batch
+            self.obs_normalizer.update(obs)
+            self.act_normalizer.update(actions)
+            
+            # Transform data
+            obs = self.obs_normalizer.transform(obs)
+            actions = self.act_normalizer.transform(actions)
+            
+        # make torch dataset and ba
+        # tch
         dataset = torch.utils.data.TensorDataset(obs, actions, next_obs)
         dataloader = torch.utils.data.DataLoader(dataset, batch_size=256, shuffle=True)
 
@@ -114,9 +127,10 @@ class D4RLWorldModel:
             obs = torch.FloatTensor(obs).to(self.device)
             action = torch.FloatTensor(action).to(self.device)
             
+            if not args.noisy:
             # Normalize inputs
-            obs = self.obs_normalizer.transform(obs)
-            action = self.act_normalizer.transform(action)
+                obs = self.obs_normalizer.transform(obs)
+                action = self.act_normalizer.transform(action)
             
             # Predict
             pred_next_obs = self.model(torch.cat([obs, action], dim=1))
@@ -149,7 +163,7 @@ class D4RLWorldModel:
         self.act_normalizer = checkpoint['act_normalizer']
 
 class MLPNetwork(nn.Module):
-    def __init__(self, obs_dim, action_dim, device='cuda', hidden_dim=256, dropout=0.1):
+    def __init__(self, obs_dim, action_dim, device='cuda', hidden_dim=512, dropout=0.1):
         super(MLPNetwork, self).__init__()
         
         self.input_dim = obs_dim + action_dim
@@ -176,19 +190,40 @@ class MLPNetwork(nn.Module):
         return predictions.view(num_samples, -1)
     
     
-def main(args):
-    model = D4RLWorldModel(env_name=args.env_name, device=args.device, epochs=args.epochs)
+def main(args, dataset=None):
+    
+
+    model = D4RLWorldModel(env_name=args.env_name, dataset = dataset, device=args.device)
     loss = model.train_model()
     print("finished training")
+    if args.noisy:
+        args.env_name = args.env_name + "_noisy"
     model.save_model(f"saved_models/{args.env_name}/world_model_{loss:.2f}.pth")
     print("saved model")
     
 if __name__ == "__main__":
     # get argument
     parser = argparse.ArgumentParser()
-    parser.add_argument("--env_name", type=str, default="halfcheetah-random-v0")
+    parser.add_argument("--env_name", type=str, default="hopper-expert-v0")
     parser.add_argument("--device", type=str, default="cuda:0")
-    parser.add_argument("--epochs", type=int, default=50)
-    args = parser.parse_args()
+    parser.add_argument("--epochs", type=int, default=80)
+    parser.add_argument("--data_path", type=str, default="/abiomed/intermediate_data_d4rl/hopper-expert-v0_noisy_0.05.pkl")
+    parser.add_argument("--noisy", action='store_true', help="whether to use noisy dataset")
 
-    main(args)
+    #model parameters
+    # parser.add_argument("--hidden_dim", type=int, default=512, help="hidden dimension of the model")
+    # parser.add_argument("--lr", type=float, default=1e-3, help="learning rate for the model")
+    # parser.add_argument("--batch_size", type=int, default=256, help="batch size for training")
+    # parser.add_argument("--holdout_ratio", type=float, default=0.1, help="holdout ratio for training")
+    # parser.add_argument("--seed", type=int, default=42, help="random seed for reproducibility")
+
+    args = parser.parse_args()
+    args.noisy = True
+    print()
+    if args.data_path != "":
+        with open(args.data_path, 'rb') as f:
+            data = pickle.load(f)
+    else:
+        data = None
+    
+    main(args,data)

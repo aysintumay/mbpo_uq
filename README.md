@@ -12,6 +12,19 @@ The performance of model-based RL algorithm greatly depends on the implementatio
 - PyTorch 1.8+
 
 # Usage
+# Noisy D4RL generation
+Run noisy_d4rl.ipynb
+Data saved in /abiomed/intermediate_data_d4rl
+# Run world models and compare with transition model
+Train on noisy D4RL data:
+```
+python models/d4rl_world_model.py --env_name hopper-expert-v0 --data_path "/abiomed/intermediate_data_d4rl/hopper-expert-v0_noisy_0.05.pkl" --noisy
+```
+Train on D4RL data
+```
+python models/d4rl_world_model.py --env_name hopper-expert-v0 --data_path
+```
+Compare ensemble model and world model: see compare_models.ipynb
 
 # UAMBPO
 ```

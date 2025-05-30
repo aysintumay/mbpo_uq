@@ -160,7 +160,7 @@ class TransitionModel:
         else:
             pred_diff_means = pred_diff_means + np.random.normal(size=pred_diff_means.shape) * ensemble_model_stds
 
-        num_models, batch_size, _ = pred_diff_means.shape
+        num_models, batch_size, _ = pred_diff_means.shape #shape (7,B, OBS+rew)
         model_idxes = np.random.choice(self.model.elite_model_idxes, size=batch_size)
         batch_idxes = np.arange(0, batch_size)
 
@@ -243,5 +243,4 @@ class TransitionModel:
         for network_name, network in self.networks.items():
             load_path = os.path.join(model_save_dir, network_name + ".pt")
             state_dict = torch.load(load_path, map_location=f'{self.device}')
-            # print(f'trainsition model to {self.device}')
             return network.load_state_dict(state_dict)

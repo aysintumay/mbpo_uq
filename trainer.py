@@ -8,52 +8,8 @@ from matplotlib import pyplot as plt
 from tqdm import tqdm
 import copy 
 from common import util
+from plotter import *
 
-
-def plot_accuracy(mean_acc, std_acc, name=''):
-    epochs = np.arange(mean_acc.shape[0])
-
-    fig, ax = plt.subplots(figsize=(8, 5.8), dpi=300)
-    ax.plot(epochs, mean_acc, label=f'{name }')
-    ax.fill_between(epochs, mean_acc - std_acc/2, mean_acc + std_acc/2, alpha=0.5, label='± 1/2 Std')
-    ax.set_xlabel('time')
-    ax.set_ylabel(f'{name}')
-    ax.set_title(f'{name} Over Epochs')
-    ax.legend()
-    wandb.log({f"{name}": wandb.Image(fig)})
-
-
-def plot_p_loss(critic1,name=''):
-
-    epochs = np.arange(critic1.shape[0])
-
-    mean_c1 = critic1.mean(axis=1)
-    std_c1 = critic1.std(axis=1)
-    fig, ax = plt.subplots(figsize=(8, 5.8), dpi=300)
-    ax.plot(epochs, mean_c1, label=f'{name} Loss')
-    ax.fill_between(epochs, mean_c1 - std_c1/2, mean_c1 + std_c1/2, alpha=0.3, label='± 1/2 Std')
-    ax.set_xlabel('time')
-    ax.set_ylabel('Loss')
-    ax.set_title(f'{name} Loss Over Time')
-    ax.legend()
-    wandb.log({f"{name} Loss": wandb.Image(fig)})
-
-
-def plot_q_value(q1, name=''):
-
-
-    epochs = np.arange(q1.shape[0])
-
-    mean_c1 = q1.mean(axis=1)
-    std_c1 = q1.std(axis=1)
-    fig, ax = plt.subplots(figsize=(8, 5.8), dpi=300)
-    ax.plot(epochs, mean_c1, label=f'{name} Value')
-    ax.fill_between(epochs, mean_c1 - std_c1/2, mean_c1 + std_c1/2, alpha=0.3, label='± 1/2 Std')
-    ax.set_xlabel('time')
-    ax.set_ylabel('Loss')
-    ax.set_title(f'{name} Value Over Time')
-    ax.legend()
-    wandb.log({f"{name} Value": wandb.Image(fig)})
 
 
 class Trainer:
@@ -115,7 +71,7 @@ class Trainer:
         reward_std_l, acc_std_l, off_acc_std = [], [], []
         for e in range(1, self._epoch + 1):
             self.algo.policy.train()
-            with tqdm(total=self._step_per_epoch, desc=f"Epoch #{e}/{self._epoch}") as t:
+            with tqdm.tqdm(total=self._step_per_epoch, desc=f"Epoch #{e}/{self._epoch}") as t:
                 while t.n < t.total:
                     if num_timesteps % self._rollout_freq == 0:
                         self.algo.rollout_transitions()
@@ -131,9 +87,9 @@ class Trainer:
                     alpha_loss.append(loss["loss/alpha"])
                     t.set_postfix(**loss)
                     # log
-                    if num_timesteps % self._log_freq == 0:
-                        for k, v in loss.items():
-                            self.logger.record(k, v, num_timesteps, printed=False)
+                    # if num_timesteps % self._log_freq == 0:
+                    #     for k, v in loss.items():
+                    #         self.logger.record(k, v, num_timesteps, printed=False)
                     num_timesteps += 1
                     t.update(1)
             # evaluate current policy
@@ -201,18 +157,26 @@ class Trainer:
     def _evaluate(self, dataset, world_model, args):
 
         self.algo.policy.eval()
-        obs = self.eval_env.reset()
-        eval_ep_info_buffer = []
-        num_episodes = 0
-        episode_reward, episode_length = 0, 0
-        obs_, next_obs_, action_, reward_, terminal_, raw_reward_ , std_list  = [],[],[],[],[],[],[]
-        
-        batch_size = 50
-        num_samples = 50
-        total_batches = len(dataset['observations']) // batch_size  
+        self.eval_env.reset()
 
-        # CHANGE:
-        for i in tqdm(range(total_batches)):
+        eval_ep_info = []
+        episode_reward, episode_length = 0, 0
+
+        batch_size = args.batch_size_generation
+        num_samples = args.num_samples
+        obs_dim = dataset['observations'].shape[1]
+        total_batches = len(dataset['observations']) // batch_size
+
+        data_buffer = {
+            'observations': [],
+            'actions': [],
+            'rewards': [],
+            'terminals': [],
+            'next_observations': [],
+            'raw_rewards': [],
+        }
+
+        for i in tqdm.tqdm(range(total_batches)):
 
             start_idx = i * batch_size
             end_idx = (i + 1) * batch_size
@@ -235,72 +199,71 @@ class Trainer:
                 next_obs_batch[j] = next_obs
                 reward_batch[j] = reward
                 terminal_batch[j] = terminal
-                info_batch[j] = info            #predict next_obs
+                info_batch[j] = info            
 
             states = np.repeat(obs_batch, num_samples, axis=0)
             actions = np.repeat(action_batch, num_samples, axis=0)
 
             pred_input = torch.FloatTensor(np.concatenate([states, actions],axis = 1)).to(world_model.device)
 
-            # next_obs_samples = world_model.model.predict_multiple(pred_input, num_samples)
-            next_obs_samples = world_model.model(pred_input).detach().cpu().numpy()        
+            next_obs_samples = world_model.model(pred_input).detach().cpu().numpy() 
+       
             # Reshape to [batch_size, num_samples, obs_dim]
             obs_dim = obs_batch.shape[1]
             next_obs_samples = next_obs_samples.reshape(batch_size, num_samples, obs_dim)
             
-            next_obs_means = world_model.predict(states, actions)
-            # next_obs_means = np.mean(next_obs_samples, axis=1)  # Shape: [batch_size, obs_dim]
+            next_obs_means = world_model.predict(obs_batch, action_batch)  #if use the next_obs_batch instead of the predicted next_obs
 
             # Calculate standard deviation across samples for each batch item
             batch_stds = np.std(next_obs_samples, axis=1).mean(axis=1)
 
             penalized_rewards = reward_batch - args.crps_scale * batch_stds
-        
-            # Track episode statistics
-            episode_reward += np.sum(penalized_rewards)
-            episode_length += batch_size
-        
-            obs_.extend(obs_batch)
-            next_obs_.extend(list(next_obs_means))
-            action_.extend(action_batch)
-            reward_.extend(penalized_rewards)
-            terminal_.extend(terminal_batch)
+            # penalized_rewards = reward_batch
+            # next_obs_means = next_obs_batch #if use the next_obs_batch instead of the predicted next_obs
 
-            raw_reward_.extend(reward_batch)
-            std_list.extend(batch_stds)
+            # Accumulate data
+            data_buffer['observations'].append(obs_batch)
+            data_buffer['actions'].append(action_batch)
+            data_buffer['rewards'].append(penalized_rewards)
+            data_buffer['terminals'].append(terminal_batch)
+            data_buffer['next_observations'].append(next_obs_means)
+            data_buffer['raw_rewards'].append(reward_batch)
 
 
             # Record completed episodes
-            for term in terminal_batch:
-                if term:
-                    eval_ep_info_buffer.append({
-                        "episode_reward": episode_reward, 
-                        "episode_length": episode_length
+            episode_reward += np.sum(penalized_rewards)
+            episode_length += batch_size
+            for done in terminal_batch:
+                if done:
+                    eval_ep_info.append({
+                        "episode_reward": episode_reward,
+                        "episode_length": episode_length,
                     })
                     episode_reward, episode_length = 0, 0
 
-        dataset = {
-                'observations': np.array(obs_),
-                'actions': np.array(action_),  # Reshape to ensure it's 2D
-                'rewards': np.array(reward_),
-                'terminals': np.array(terminal_),
-                'next_observations': np.array(next_obs_),
-            }
         
-        #rewards withput std penalty using D_1
-        with open(f'/data/abiomed_tmp/intermediate_data_d4rl/raw_rewards_{args.task}_{args.crps_scale}_{self.iter}.pkl', 'wb') as f:
-            np.save(f, np.array(raw_reward_))
-        #rewards with penalty using D_1
-        with open(f'/data/abiomed_tmp/intermediate_data_d4rl/rewards_{args.task}_{args.crps_scale}_{self.iter}.pkl', 'wb') as f:
-            np.save(f, np.array(reward_))
-        #save crps list
-        with open(f'/data/abiomed_tmp/intermediate_data_d4rl/std_list_{args.task}_{args.crps_scale}_{self.iter}.pkl', 'wb') as f:
-            np.save(f, np.array(std_list))
+        # Combine batches
+        dataset = {
+            key: np.concatenate(data_buffer[key], axis=0)
+            for key in ['observations', 'actions', 'rewards', 'terminals', 'next_observations']
+        }
+           
+        #rewards without std penalty using D_1
+        # with open(f'/data/abiomed_tmp/intermediate_data_d4rl/raw_rewards_{args.task}_{args.crps_scale}_{self.iter}.pkl', 'wb') as f:
+        #     np.save(f, np.array(raw_reward_))
+        # #rewards with penalty using D_1
+        # with open(f'/data/abiomed_tmp/intermediate_data_d4rl/rewards_{args.task}_{args.crps_scale}_{self.iter}.pkl', 'wb') as f:
+        #     np.save(f, np.array(reward_))
+        # #save crps list
+        # with open(f'/data/abiomed_tmp/intermediate_data_d4rl/std_list_{args.task}_{args.crps_scale}_{self.iter}.pkl', 'wb') as f:
+        #     np.save(f, np.array(std_list))
         
         return {
-            "eval/episode_reward": [ep_info["episode_reward"] for ep_info in eval_ep_info_buffer],
-            "eval/episode_length": [ep_info["episode_length"] for ep_info in eval_ep_info_buffer]
+            "eval/episode_reward": [ep_info["episode_reward"] for ep_info in eval_ep_info],
+            "eval/episode_length": [ep_info["episode_length"] for ep_info in eval_ep_info]
         }, dataset
+
+   
 
 
     def evaluate(self):
@@ -326,7 +289,7 @@ class Trainer:
                                 size=self._eval_episodes,
                                 replace=False)
         
-        for i in tqdm(range(indx.shape[0])):
+        for i in tqdm.tqdm(range(indx.shape[0])):
             start_time = time.time()
             act = self.eval_env.get_pl()
            
@@ -469,3 +432,5 @@ class Trainer:
         accuracy_1_off = (sum(pl_pred_fl == pl_true_fl) + sum(pl_pred_fl+1 == pl_true_fl)+sum(pl_pred_fl-1 == pl_true_fl))/n
 
         return accuracy, accuracy_1_off
+
+

@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 import tqdm
 import argparse
 
-from tensorboard.backend.event_processing import event_accumulator
+# from tensorboard.backend.event_processing import event_accumulator
 
 
 def convert_tfenvents_to_csv(root_dir, xlabel, ylabel, ylabel2):
@@ -72,13 +72,14 @@ def crps_evaluation(samples, y_true):
 
     """
     Calculate pointwise CRPS
+    samples: dim [M, T, D]
+    y_true: dim [T, D]
     """
     e_x_y = np.mean(np.abs(samples - y_true), axis=0)
     e_x_x_prime = np.array([np.abs(si - sj) for i, si in enumerate(samples) for j, sj in enumerate(samples) if i != j]).mean(axis = 0)
     crps = e_x_y - 0.5 * e_x_x_prime
     crps_ed = crps
 
-    # DO NOT, if calculating pointwise and concatenating with the feature vector 
     mean_crps = np.mean(crps)
 
     # mean_ed_2 = np.mean(samples, axis = 0)

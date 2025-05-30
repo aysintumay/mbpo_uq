@@ -11,6 +11,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import tqdm
 import argparse
+import wandb
 
 from tensorboard.backend.event_processing import event_accumulator
 
@@ -59,6 +60,52 @@ COLORS = (
         '#000000',  # BLACK
     ]
 )
+
+
+def plot_accuracy(mean_acc, std_acc, name=''):
+    epochs = np.arange(mean_acc.shape[0])
+
+    fig, ax = plt.subplots(figsize=(8, 5.8), dpi=300)
+    ax.plot(epochs, mean_acc, label=f'{name }')
+    ax.fill_between(epochs, mean_acc - std_acc/2, mean_acc + std_acc/2, alpha=0.5, label='± 1/2 Std')
+    ax.set_xlabel('time')
+    ax.set_ylabel(f'{name}')
+    ax.set_title(f'{name} Over Epochs')
+    ax.legend()
+    wandb.log({f"{name}": wandb.Image(fig)})
+
+
+def plot_p_loss(critic1,name=''):
+
+    epochs = np.arange(critic1.shape[0])
+
+    mean_c1 = critic1.mean(axis=1)
+    std_c1 = critic1.std(axis=1)
+    fig, ax = plt.subplots(figsize=(8, 5.8), dpi=300)
+    ax.plot(epochs, mean_c1, label=f'{name} Loss')
+    ax.fill_between(epochs, mean_c1 - std_c1/2, mean_c1 + std_c1/2, alpha=0.3, label='± 1/2 Std')
+    ax.set_xlabel('time')
+    ax.set_ylabel('Loss')
+    ax.set_title(f'{name} Loss Over Time')
+    ax.legend()
+    wandb.log({f"{name} Loss": wandb.Image(fig)})
+
+
+def plot_q_value(q1, name=''):
+
+
+    epochs = np.arange(q1.shape[0])
+
+    mean_c1 = q1.mean(axis=1)
+    std_c1 = q1.std(axis=1)
+    fig, ax = plt.subplots(figsize=(8, 5.8), dpi=300)
+    ax.plot(epochs, mean_c1, label=f'{name} Value')
+    ax.fill_between(epochs, mean_c1 - std_c1/2, mean_c1 + std_c1/2, alpha=0.3, label='± 1/2 Std')
+    ax.set_xlabel('time')
+    ax.set_ylabel('Loss')
+    ax.set_title(f'{name} Value Over Time')
+    ax.legend()
+    wandb.log({f"{name} Value": wandb.Image(fig)})
 
 
 def convert_tfenvents_to_csv(root_dir, xlabel, ylabel):
@@ -318,12 +365,12 @@ if __name__ == '__main__':
     dataset = env.data
 
     data_paths = [
-                  os.path.join(args.data_path, f"discounted_testset.pkl"),
-                  os.path.join(args.data_path, f"dataset_test_v_0.7_1.pkl"), 
-                    os.path.join(args.data_path, f"dataset_test_v_0.7_2.pkl"),
-                    os.path.join(args.data_path, f"dataset_test_v_0.7_3.pkl"),
-                    os.path.join(args.data_path, f"dataset_test_v_0.7_4.pkl"),
-                    os.path.join(args.data_path, f"dataset_test_v_None_5.pkl"),
+                  os.path.join(args.data_path, f"discounted_testset_2.0.pkl"),
+                  os.path.join(args.data_path, f"dataset_test_v_3.0_1.pkl"), 
+                    os.path.join(args.data_path, f"dataset_test_v_3.0_2.pkl"),
+                    # os.path.join(args.data_path, f"dataset_test_v_3.0_3.pkl"),
+                    # os.path.join(args.data_path, f"dataset_test_v_3.0_4.pkl"),
+                    # os.path.join(args.data_path, f"dataset_test_v_None_3.pkl"),
                   
                 ]
     

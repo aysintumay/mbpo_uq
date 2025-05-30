@@ -101,7 +101,7 @@ class MOPO:
         updated = self.dynamics_model.update_best_snapshots(eval_mse_losses)
        
         while not break_training:
-            starttime = time.time()
+            # starttime = time.time()
             for train_data_batch in dict_batch_generator(train_data, self.model_batch_size):
                 train_data_batch = {k: v.to(self.device) if isinstance(v, torch.Tensor) else v 
                     for k, v in train_data_batch.items()}
@@ -111,7 +111,7 @@ class MOPO:
 
             eval_mse_losses, _ = self.dynamics_model.eval_data(eval_data, update_elite_models=False)
             self.logger.record("loss/model_eval_mse_loss", eval_mse_losses.mean(), self.model_tot_train_timesteps)
-            print('elapsed time',time.time() - starttime)
+            # print('elapsed time',time.time() - starttime)
             updated = self.dynamics_model.update_best_snapshots(eval_mse_losses)
             num_epochs_since_prev_best += 1
             if updated:

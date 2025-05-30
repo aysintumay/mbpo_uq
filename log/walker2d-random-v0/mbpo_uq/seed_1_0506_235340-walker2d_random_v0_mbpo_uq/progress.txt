@@ -1,0 +1,115 @@
+Start training dynamics
+loss/model_eval_mse_loss: 10.410308
+loss/model_eval_mse_loss: 2.081274
+loss/model_eval_mse_loss: 1.522570
+loss/model_eval_mse_loss: 1.662839
+loss/model_eval_mse_loss: 1.622222
+loss/model_eval_mse_loss: 1.101656
+loss/model_eval_mse_loss: 1.147078
+loss/model_eval_mse_loss: 1.376173
+loss/model_eval_mse_loss: 1.193685
+loss/model_eval_mse_loss: 1.086132
+loss/model_eval_mse_loss: 0.940330
+loss/model_eval_mse_loss: 1.050446
+loss/model_eval_mse_loss: 0.945778
+loss/model_eval_mse_loss: 0.960452
+loss/model_eval_mse_loss: 0.827286
+loss/model_eval_mse_loss: 0.882048
+loss/model_eval_mse_loss: 0.885811
+loss/model_eval_mse_loss: 0.788426
+loss/model_eval_mse_loss: 0.861240
+loss/model_eval_mse_loss: 0.768618
+loss/model_eval_mse_loss: 0.885384
+loss/model_eval_mse_loss: 0.749183
+loss/model_eval_mse_loss: 0.889856
+loss/model_eval_mse_loss: 0.832041
+loss/model_eval_mse_loss: 1.147140
+loss/model_eval_mse_loss: 0.792422
+loss/model_eval_mse_loss: 0.949135
+loss/model_eval_mse_loss: 0.956594
+loss/model_eval_mse_loss: 1.005614
+loss/model_eval_mse_loss: 0.891781
+loss/model_eval_mse_loss: 0.896430
+loss/model_eval_mse_loss: 0.723683
+loss/model_eval_mse_loss: 0.930631
+loss/model_eval_mse_loss: 0.842124
+loss/model_eval_mse_loss: 0.869880
+loss/model_eval_mse_loss: 1.065230
+loss/model_eval_mse_loss: 0.868212
+loss/model_eval_mse_loss: 0.935490
+loss/model_eval_mse_loss: 0.798367
+loss/model_eval_mse_loss: 0.942825
+loss/model_eval_mse_loss: 0.853011
+loss/model_eval_mse_loss: 0.770995
+loss/model_eval_mse_loss: 1.049239
+loss/model_eval_mse_loss: 1.292782
+loss/model_eval_mse_loss: 1.038505
+loss/model_eval_mse_loss: 0.826618
+loss/model_eval_mse_loss: 1.004497
+loss/model_eval_mse_loss: 1.180853
+loss/model_eval_mse_loss: 0.886686
+loss/model_eval_mse_loss: 0.732982
+loss/model_eval_mse_loss: 0.952544
+loss/model_eval_mse_loss: 0.807134
+loss/model_eval_mse_loss: 0.669843
+loss/model_eval_mse_loss: 0.984870
+loss/model_eval_mse_loss: 0.734832
+loss/model_eval_mse_loss: 0.916084
+loss/model_eval_mse_loss: 0.674959
+loss/model_eval_mse_loss: 1.281625
+loss/model_eval_mse_loss: 0.927186
+loss/model_eval_mse_loss: 0.851963
+loss/model_eval_mse_loss: 0.894200
+loss/model_eval_mse_loss: 0.813879
+loss/model_eval_mse_loss: 0.779861
+loss/model_eval_mse_loss: 0.687578
+loss/model_eval_mse_loss: 0.812819
+loss/model_eval_mse_loss: 1.008553
+loss/model_eval_mse_loss: 0.826852
+loss/model_eval_mse_loss: 1.004574
+total time: 3031.636s
+total time: 1051.364s
+Start training dynamics
+loss/model_eval_mse_loss: 738.052795
+loss/model_eval_mse_loss: 143.251816
+loss/model_eval_mse_loss: 150.042343
+loss/model_eval_mse_loss: 144.753174
+loss/model_eval_mse_loss: 153.674438
+loss/model_eval_mse_loss: 147.821182
+loss/model_eval_mse_loss: 149.389038
+total time: 274.382s
+total time: 1093.845s
+Start training dynamics
+loss/model_eval_mse_loss: 26.930225
+loss/model_eval_mse_loss: 4.602956
+loss/model_eval_mse_loss: 4.557676
+loss/model_eval_mse_loss: 4.521025
+loss/model_eval_mse_loss: 4.507407
+loss/model_eval_mse_loss: 4.492116
+loss/model_eval_mse_loss: 4.485314
+loss/model_eval_mse_loss: 4.482823
+loss/model_eval_mse_loss: 4.475151
+loss/model_eval_mse_loss: 4.474902
+loss/model_eval_mse_loss: 4.492905
+loss/model_eval_mse_loss: 4.472876
+loss/model_eval_mse_loss: 4.491270
+loss/model_eval_mse_loss: 4.471963
+loss/model_eval_mse_loss: 4.449435
+loss/model_eval_mse_loss: 4.478947
+loss/model_eval_mse_loss: 4.456477
+loss/model_eval_mse_loss: 4.451349
+loss/model_eval_mse_loss: 4.474687
+loss/model_eval_mse_loss: 4.479946
+total time: 845.825s
+total time: 1083.990s
+Start training dynamics
+loss/model_eval_mse_loss: 54559.406250
+loss/model_eval_mse_loss: 14373.418945
+loss/model_eval_mse_loss: 13741.661133
+loss/model_eval_mse_loss: 14455.264648
+loss/model_eval_mse_loss: 14213.006836
+loss/model_eval_mse_loss: 13962.134766
+loss/model_eval_mse_loss: 14356.664062
+loss/model_eval_mse_loss: 14758.798828
+total time: 320.236s
+total time: 1106.170s

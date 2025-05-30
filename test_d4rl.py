@@ -61,8 +61,9 @@ def test(i, args, world_model, model_logger, sac_policy, trainer, offline_buffer
     writer.add_text("args", str(args))
     logger = Logger(writer=writer,log_path=log_path)
 
-    Devid = args.devid if args.device == 'cuda' else -1
-    set_device_and_logger(Devid,logger, model_logger)
+    # Devid = args.devid if args.device == 'cuda' else -1
+    device_model = set_device_and_logger(args.device.index,logger, model_logger)
+    # args.device = device_model
 
     # create env and dataset
    
