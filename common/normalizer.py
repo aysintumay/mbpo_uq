@@ -40,8 +40,8 @@ class StandardNormalizer(object):
                 self.mean = torch.zeros(dim, dtype=torch.float32).to(util.device)
                 self.var = torch.ones(dim, dtype=torch.float32).to(util.device)
             elif isinstance(samples, np.ndarray):
-                self.mean = np.zeros(dim, dtype=float)
-                self.var = np.ones(dim, dtype=float)
+                self.mean = np.zeros(dim, dtype=np.float32)
+                self.var = np.ones(dim, dtype=np.float32)
 
         if isinstance(samples, torch.Tensor):
             sample_mean = torch.mean(samples, dim=0, keepdims=True)
@@ -52,11 +52,11 @@ class StandardNormalizer(object):
 
         delta_mean = sample_mean - self.mean
 
-        new_mean = self.mean + delta_mean * sample_count / (self.tot_count + sample_count)
+        new_mean = (self.mean + delta_mean * sample_count / (self.tot_count + sample_count)).astype(np.float32)
         prev_var = self.var * self.tot_count
         sample_var = sample_var * sample_count
-        new_var = prev_var + sample_var + delta_mean * delta_mean * self.tot_count * sample_count / (self.tot_count + sample_count)
-        new_var = new_var / (self.tot_count + sample_count)
+        new_var = (prev_var + sample_var + delta_mean * delta_mean * self.tot_count * sample_count / (self.tot_count + sample_count)).astype(np.float32)
+        new_var = (new_var / (self.tot_count + sample_count)).astype(np.float32)
 
         self.mean = new_mean
         self.var = new_var
@@ -75,13 +75,15 @@ class StandardNormalizer(object):
         if self.mean is None or self.var is None:
             return data
         if isinstance(data, torch.Tensor):
-            return (data - torch.tensor(self.mean).to(data.device)) / torch.sqrt(torch.tensor(self.var).to(data.device))
+            return ((data - torch.tensor(self.mean).to(data.device)) / torch.sqrt(torch.tensor(self.var).to(data.device))).float()
         elif isinstance(data, np.ndarray):
-            return (data - np.array(self.mean)) / np.sqrt(np.array(self.var))
+            return ((data - np.array(self.mean)) / np.sqrt(np.array(self.var))).astype(np.float32)
 
     def inverse_transform(self, data):
         # return data
+
         if self.mean is None or self.var is None:
+            print("Warning: Inverse transform called before fitting normalizer. Returning data unchanged.")
             return data
         if isinstance(data, torch.Tensor):
             return data * torch.sqrt(torch.tensor(self.var).to(data.device)) + torch.tensor(self.mean).to(data.device)

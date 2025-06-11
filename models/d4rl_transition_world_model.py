@@ -8,6 +8,7 @@ import argparse
 import pickle
 import sys
 import os
+import importlib
 # sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from common.normalizer import StandardNormalizer
 from common import util
@@ -26,6 +27,7 @@ class D4RLWorldModel:
                  load_data = True,
                  epochs = 50,
                  hidden_dim=512,
+                 lambda_obs = 0.8,
                 #  args=None,
                  **kwargs):
         
@@ -48,6 +50,7 @@ class D4RLWorldModel:
         self.device = device
         print(f"Using device: {self.device}")
         
+        self.lambda_obs = lambda_obs
         # Initialize model
         self.model = MLPNetwork(obs_dim=self.obs_dim, 
                               action_dim=self.action_dim, 
@@ -77,6 +80,7 @@ class D4RLWorldModel:
         obs = torch.FloatTensor(data['observations'][:train_n]).to(self.device)
         actions = torch.FloatTensor(data['actions'][:train_n]).to(self.device)
         next_obs = torch.FloatTensor(data['next_observations'][:train_n]).to(self.device)
+        rewards = torch.FloatTensor(data['rewards'][:train_n]).to(self.device)
         
         
         self.obs_normalizer.update(obs)
@@ -86,37 +90,30 @@ class D4RLWorldModel:
         # obs = self.obs_normalizer.transform(obs)
         # actions = self.act_normalizer.transform(actions)
         # next_obs = self.obs_normalizer.transform(next_obs)
-
-        print(self.obs_normalizer.mean, self.obs_normalizer.var)
        
-        # make torch dataset and bas
+        # make torch dataset and ba
         # tch
-        dataset = torch.utils.data.TensorDataset(obs, actions, next_obs)
+        dataset = torch.utils.data.TensorDataset(obs, actions, next_obs, rewards)
         dataloader = torch.utils.data.DataLoader(dataset, batch_size=256, shuffle=True)
 
         # Train model
         l = 0
         self.model.train()
-        for epoch in range(self.epochs): 
+        for epoch in range(self.epochs):  
             
             epoch_loss = []
-            unnorm_epoch_loss = []
             # use dataloader
-            for batch_obs, batch_actions, batch_next_obs in dataloader:
+            for batch_obs, batch_actions, batch_next_obs, true_reward in dataloader:
                 self.model_optimizer.zero_grad()
 
                 # Forward pass
-                pred_next_obs = self.model(torch.cat([batch_obs, batch_actions], dim=1))
-                
+                pred_next_obs, pred_reward = self.model(torch.cat([batch_obs, batch_actions], dim=1))
+
+                obs_loss = nn.MSELoss()(pred_next_obs, batch_next_obs)
+                reward_loss = nn.MSELoss()(pred_reward, true_reward)
+                loss = self.lambda_obs * obs_loss + (1 - self.lambda_obs) * reward_loss
                 # Compute loss
-                loss = nn.MSELoss()(pred_next_obs, batch_next_obs)
-
-                # pred_next_obs_unnorm = self.obs_normalizer.inverse_transform(pred_next_obs)
-                # batch_next_obs_unnorm = self.obs_normalizer.inverse_transform(batch_next_obs)
-                # # Compute unnorm loss
-
-                # unnorm_loss = nn.MSELoss()(pred_next_obs_unnorm, batch_next_obs_unnorm)
-                # unnorm_epoch_loss.append(unnorm_loss.item())
+                # loss = nn.MSELoss()(pred_next_obs, batch_next_obs)
             
                 # Backward pass
                 loss.backward()
@@ -124,28 +121,31 @@ class D4RLWorldModel:
                 epoch_loss.append(loss.item())
             
             if epoch % 2 == 0:
-                print(f'Epoch {epoch}, Loss: {np.mean(epoch_loss):.4f}')
-                # print(f'Epoch {epoch}, Unnormalized Loss: {np.mean(unnorm_epoch_loss):.4f}')
+                print(f'Epoch {epoch}, Obs Loss: {obs_loss.item():.4f}, Reward Loss: {reward_loss.item():.4f}, Loss: {np.mean(epoch_loss):.4f}')
                 l = np.mean(epoch_loss)
         return l
          
 
     def predict(self, obs, action):
         """Predict next state given current state and action"""
+        import_path = f"static_fns.hopper"
+        static_fns = importlib.import_module(import_path).StaticFns
         self.model.eval()
         with torch.no_grad():
             obs = torch.FloatTensor(obs).to(self.device)
             action = torch.FloatTensor(action).to(self.device)
             
             # Normalize inputs
-            obs = self.obs_normalizer.transform(obs)
-            action = self.act_normalizer.transform(action)
+            # obs = self.obs_normalizer.transform(obs)
+            # action = self.act_normalizer.transform(action)
             # Predict
-            pred_next_obs = self.model(torch.cat([obs, action], dim=1))
+            pred_next_obs, pred_reward = self.model(torch.cat([obs, action], dim=1))
             # Denormalize output
-            pred_next_obs = self.obs_normalizer.inverse_transform(pred_next_obs)
+            # pred_next_obs = self.obs_normalizer.inverse_transform(pred_next_obs)
+            terminals = static_fns.termination_fn(obs.detach().cpu().numpy(), action.detach().cpu().numpy(), pred_next_obs.detach().cpu().numpy())
+            terminals = terminals[:, None]
                 
-        return pred_next_obs.cpu().numpy()
+        return pred_next_obs.cpu().numpy(), pred_reward.cpu().numpy().reshape(-1,1), terminals, None
 
     # def crps(self, x, y):
     #     #calculate crps for a single sample
@@ -190,17 +190,21 @@ class MLPNetwork(nn.Module):
             # nn.Linear(self.hidden_dim, self.hidden_dim),
             # nn.ReLU(),
             # nn.Dropout(dropout),
-            nn.Linear(self.hidden_dim, obs_dim)
+            # nn.Linear(self.hidden_dim, obs_dim)
         ).to(device)
-        
+        self.obs_head = nn.Linear(hidden_dim, obs_dim).to(device)
+        self.rew_head = nn.Linear(hidden_dim, 1).to(device)  
     def forward(self, x):
-        return self.network(x)
+        h = self.network(x)
+        next_obs = self.obs_head(h)
+        reward = self.rew_head(h)
+        return next_obs, reward.squeeze(-1)
     
     @torch.no_grad()
     def predict_multiple(self, x, num_samples=10):
         input = torch.repeat(x, num_samples,1) #changed torch to numpy
-        predictions = self.forward(input)
-        return predictions.view(num_samples, -1)
+        predictions, reward_preds = self.forward(input)
+        return predictions, reward_preds 
     
     
 def main(args, dataset=None):
@@ -211,7 +215,7 @@ def main(args, dataset=None):
     print("finished training")
     if args.noisy:
         args.env_name = args.env_name + "_noisy"
-    model.save_model(f"saved_models/{args.env_name}/world_model_{loss:.2f}_{args.n}.pth")
+    model.save_model(f"saved_models/{args.env_name}/transition_world_model_{loss:.2f}_{args.n}.pth")
     print("saved model")
     
 if __name__ == "__main__":
@@ -222,6 +226,8 @@ if __name__ == "__main__":
     parser.add_argument("--epochs", type=int, default=80)
     parser.add_argument("--data_path", type=str, default="")
     parser.add_argument("--n", type=float, default=0.00)
+
+    
     #/abiomed/intermediate_data_d4rl/hopper-expert-v0_noisy_0.1.pkl
     #model parameters
     # parser.add_argument("--hidden_dim", type=int, default=512, help="hidden dimension of the model")
@@ -232,6 +238,8 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     args.noisy = True
+    
+ 
     print()
     if args.data_path != "":
         with open(args.data_path, 'rb') as f:

@@ -12,19 +12,59 @@ The performance of model-based RL algorithm greatly depends on the implementatio
 - PyTorch 1.8+
 
 # Usage
+
 # Noisy D4RL generation
 Run noisy_d4rl.ipynb
-Data saved in /abiomed/intermediate_data_d4rl
-# Run world models and compare with transition model
-Train on noisy D4RL data:
+Data saved in ```/abiomed/intermediate_data_d4rl/```
+
+# Run world model for D4RL
 ```
-python models/d4rl_world_model.py --env_name hopper-expert-v0 --data_path "/abiomed/intermediate_data_d4rl/hopper-expert-v0_noisy_0.05.pkl" --noisy
+python models/d4rl_world_model.py --epochs 100
 ```
-Train on D4RL data
+for Noisy-D4RL ( i.e for noise level 0.5)
+Current noise levels = (0.05, 0.1, 0.3, 0.5, 0.6, 0.8)
 ```
-python models/d4rl_world_model.py --env_name hopper-expert-v0 --data_path
+python models/d4rl_world_model.py --epochs 100 --data_path "/abiomed/intermediate_data_d4rl/hopper-expert-v0_noisy_0.05_unnorm.pkl" --n 0.05
 ```
-Compare ensemble model and world model: see compare_models.ipynb
+# Run world model for MBPO
+This model has 2 final heads for next state and reward prediction.
+for normal D4RL
+```
+python models/d4rl_transition_world_model.py 
+```
+for Noisy-D4RL
+```
+python models/d4rl_transition_world_model.py --epochs 100 --data_path "/abiomed/intermediate_data_d4rl/hopper-expert-v0_noisy_0.05_unnorm.pkl" --n 0.05
+
+```
+
+# Train transition model
+for normal D4RL
+```
+python models/train_transition_model.py 
+
+```
+for Noisy-D4RL
+
+```
+python models/train_transition_model.py --noise 0.05 --data_path "/abiomed/intermediate_data_d4rl/hopper-expert-v0_noisy_0.05_unnorm.pkl" 
+
+```
+Compare ensemble model and world model: see ```compare_models.ipynb```
+
+# Train MBPO with world model
+This script can run both mbpo and mopo. Train function is in ```train_world_transition.py```.
+```
+python mopo_world.py --algo-name mbpo --transition_model_path "saved_models/hopper-expert-v0_noisy/transition_world_model_0.01_0.0.pth" --task hopper-expert-v0 --reward-penalty-coef 0 --epoch 100
+```
+Saved model naming convention: 
+- world_model or transition_world_model: without/with reward head
+- 0.01: train loss at the last epoch rounded up to 2nd decimal point.
+- 0.0, 0.1, etc: noise level
+
+
+
+
 
 # UAMBPO
 ```

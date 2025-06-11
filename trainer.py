@@ -21,7 +21,7 @@ class Trainer:
         epoch,
         step_per_epoch,
         rollout_freq,
-        logger,
+        # logger,
         log_freq,
         run_id,
         env_name = '',
@@ -36,7 +36,7 @@ class Trainer:
         self._step_per_epoch = step_per_epoch
         self._rollout_freq = rollout_freq
 
-        self.logger = logger
+        # self.logger = logger
         self._log_freq = log_freq
         self.run_id = run_id
 
@@ -48,10 +48,10 @@ class Trainer:
 
         self.iter = ite
 
-        run = wandb.init(project="abiomed",
-                id=self.run_id,
-                resume="allow"
-                )
+        # run = wandb.init(project="abiomed",
+        #         id=self.run_id,
+        #         resume="allow"
+        #         )
     def train_dynamics(self):
         start_time = time.time()
         self.algo.learn_dynamics()
@@ -129,7 +129,7 @@ class Trainer:
             #                     )
             
             # save policy
-            model_save_dir = util.logger_model.log_path
+            model_save_dir = 'saved_models'
             if not os.path.exists(model_save_dir):
                 os.makedirs(model_save_dir)
             policy_copy = copy.deepcopy(self.algo.policy)
@@ -150,7 +150,7 @@ class Trainer:
             plot_accuracy(np.array(acc_l), np.array(acc_std_l)/self._eval_episodes, 'Accuracy')
             plot_accuracy(np.array(off_acc), np.array(off_acc_std)/self._eval_episodes, '1-off Accuracy')
 
-        self.logger.print("total time: {:.3f}s".format(time.time() - start_time))
+        print("total time: {:.3f}s".format(time.time() - start_time))
         
 
 

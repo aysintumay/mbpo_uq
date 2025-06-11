@@ -18,7 +18,7 @@ class MOPO:
             # rollout_batch_size,
             batch_size,
             real_ratio,
-            logger,
+            # logger,
             model_batch_size=256,
             rollout_batch_size=50000,
             rollout_mini_batch_size=1000,
@@ -51,7 +51,7 @@ class MOPO:
         self.max_epoch = max_epoch
         self.hold_out_ratio = hold_out_ratio
         self.model_tot_train_timesteps = 0
-        self.logger = logger
+        # self.logger = logger
 
     def _sample_initial_transitions(self):
         return self.offline_buffer.sample(self._rollout_batch_size)
@@ -95,9 +95,9 @@ class MOPO:
         self.dynamics_model.reset_best_snapshots()
 
         # init eval_mse_losses
-        self.logger.print("Start training dynamics")
+        print("Start training dynamics")
         eval_mse_losses, _ = self.dynamics_model.eval_data(eval_data, update_elite_models=False)
-        self.logger.record("loss/model_eval_mse_loss", eval_mse_losses.mean(), self.model_tot_train_timesteps)
+        print("loss/model_eval_mse_loss", eval_mse_losses.mean(), self.model_tot_train_timesteps)
         updated = self.dynamics_model.update_best_snapshots(eval_mse_losses)
        
         while not break_training:
@@ -110,7 +110,7 @@ class MOPO:
                 self.model_tot_train_timesteps += 1
 
             eval_mse_losses, _ = self.dynamics_model.eval_data(eval_data, update_elite_models=False)
-            self.logger.record("loss/model_eval_mse_loss", eval_mse_losses.mean(), self.model_tot_train_timesteps)
+            print("loss/model_eval_mse_loss", eval_mse_losses.mean(), self.model_tot_train_timesteps)
             # print('elapsed time',time.time() - starttime)
             updated = self.dynamics_model.update_best_snapshots(eval_mse_losses)
             num_epochs_since_prev_best += 1
