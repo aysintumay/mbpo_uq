@@ -42,6 +42,8 @@ def train(run, seed, args):
     else:
         env = gym.make(args.task)
         dataset = d4rl.qlearning_dataset(env)
+        env.id = ""
+        print("eval id is", env.id)
 
     #CHANGE
     # dataset = {k: v[:5] for k, v in dataset.items()}

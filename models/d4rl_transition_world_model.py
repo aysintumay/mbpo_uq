@@ -43,7 +43,7 @@ class D4RLWorldModel:
         set_global_device(device)
         util.device = device
 
-
+        self.scale = 0.1
         self.epochs = epochs
         self.obs_dim = self.env.observation_space.shape[0]
         self.action_dim = self.env.action_space.shape[0]
@@ -76,13 +76,19 @@ class D4RLWorldModel:
         n = len(data['observations'])
         train_n = int(n * (1 - self.holdout_ratio))
         
+        
         # Normalize data
         obs = torch.FloatTensor(data['observations'][:train_n]).to(self.device)
         actions = torch.FloatTensor(data['actions'][:train_n]).to(self.device)
         next_obs = torch.FloatTensor(data['next_observations'][:train_n]).to(self.device)
         rewards = torch.FloatTensor(data['rewards'][:train_n]).to(self.device)
-        
-        
+
+        val_obs = torch.FloatTensor(data['observations'][train_n:]).to(self.device)
+        val_actions = torch.FloatTensor(data['actions'][train_n:]).to(self.device)
+        val_next_obs = torch.FloatTensor(data['next_observations'][train_n:]).to(self.device)
+        val_rewards = torch.FloatTensor(data['rewards'][train_n:]).to(self.device)
+
+    
         self.obs_normalizer.update(obs)
         self.act_normalizer.update(actions)
         
@@ -95,6 +101,9 @@ class D4RLWorldModel:
         # tch
         dataset = torch.utils.data.TensorDataset(obs, actions, next_obs, rewards)
         dataloader = torch.utils.data.DataLoader(dataset, batch_size=256, shuffle=True)
+
+        val_dataset = torch.utils.data.TensorDataset(val_obs, val_actions, val_next_obs, val_rewards)
+        val_dataloader = torch.utils.data.DataLoader(val_dataset, batch_size=256, shuffle=False)
 
         # Train model
         l = 0
@@ -123,10 +132,25 @@ class D4RLWorldModel:
             if epoch % 2 == 0:
                 print(f'Epoch {epoch}, Obs Loss: {obs_loss.item():.4f}, Reward Loss: {reward_loss.item():.4f}, Loss: {np.mean(epoch_loss):.4f}')
                 l = np.mean(epoch_loss)
+                # Validate model
+                self.model.eval()
+
+                val_loss = []
+                with torch.no_grad():
+                    for val_batch_obs, val_batch_actions, val_batch_next_obs, val_true_reward in val_dataloader:
+                        pred_val_next_obs, pred_val_reward = self.model(torch.cat([val_batch_obs, val_batch_actions], dim=1))
+                        val_obs_loss = nn.MSELoss()(pred_val_next_obs, val_batch_next_obs)
+                        val_reward_loss = nn.MSELoss()(pred_val_reward, val_true_reward)
+                        val_loss.append(self.lambda_obs * val_obs_loss + (1 - self.lambda_obs) * val_reward_loss)
+                val_loss = torch.mean(torch.stack(val_loss)).item()
+                print(f'Validation Loss: {val_loss:.4f}')
+                print("Val reward loss: ", val_reward_loss.item(), "Val obs loss: ", val_obs_loss.item())
+
+            
         return l
          
 
-    def predict(self, obs, action):
+    def predict(self, obs, action, uq=None, num_samples=50):
         """Predict next state given current state and action"""
         import_path = f"static_fns.hopper"
         static_fns = importlib.import_module(import_path).StaticFns
@@ -134,17 +158,51 @@ class D4RLWorldModel:
         with torch.no_grad():
             obs = torch.FloatTensor(obs).to(self.device)
             action = torch.FloatTensor(action).to(self.device)
-            
-            # Normalize inputs
-            # obs = self.obs_normalizer.transform(obs)
-            # action = self.act_normalizer.transform(action)
-            # Predict
-            pred_next_obs, pred_reward = self.model(torch.cat([obs, action], dim=1))
-            # Denormalize output
-            # pred_next_obs = self.obs_normalizer.inverse_transform(pred_next_obs)
+            if uq is None:
+                # Normalize inputs
+                # obs = self.obs_normalizer.transform(obs)
+                # action = self.act_normalizer.transform(action)
+                # Predict
+                print('no uq')
+                pred_next_obs, pred_reward = self.model(torch.cat([obs, action], dim=1))
+                # Denormalize output
+                # pred_next_obs = self.obs_normalizer.inverse_transform(pred_next_obs)
+                
+                
+            else:
+
+                # TODO: make it functional
+                print("uq")
+                states = np.repeat(obs.detach().cpu().numpy(), num_samples, axis=0)
+                actions = np.repeat(action.detach().cpu().numpy(), num_samples, axis=0)
+                print("states shape: ", states.shape)
+
+                pred_input = torch.FloatTensor(np.concatenate([states, actions],axis = 1)).to(self.device)
+
+                next_obs, next_reward = self.model(pred_input)
+                next_obs_samples, next_reward_samples  = self.model.predict_multiple(pred_input, num_samples=num_samples)
+                # Reshape to [batch_size, num_samples, obs_dim]
+                obs_dim = obs.shape[-1]
+                next_obs_samples = next_obs_samples.reshape(1, num_samples, obs_dim)
+                next_reward_samples = next_reward_samples.reshape(1, num_samples, 1)
+                
+                # # next_obs_means = world_model.predict(obs_batch, action_batch)  #if use the next_obs_batch instead of the predicted next_obs
+
+                # # Calculate standard deviation across samples for each batch item
+                batch_stds = np.std(next_obs_samples, axis=1).max(axis=1)
+                batch_stds_rew = np.std(next_reward_samples, axis=1).mean(axis=1, keepdims=True)
+
+                penalized_rewards = next_reward - self.scale * batch_stds
+                print("rewards shape: ", next_reward.mean())
+                print("penalized rewards shape: ", batch_stds.mean())
+                print(next_reward.shape)
+                print(batch_stds.shape)
+
+                # penalized_rewards = reward_batch
+                pred_reward = penalized_rewards
+                pred_next_obs = next_obs_samples.mean(axis=1)
             terminals = static_fns.termination_fn(obs.detach().cpu().numpy(), action.detach().cpu().numpy(), pred_next_obs.detach().cpu().numpy())
             terminals = terminals[:, None]
-                
         return pred_next_obs.cpu().numpy(), pred_reward.cpu().numpy().reshape(-1,1), terminals, None
 
     # def crps(self, x, y):
@@ -177,7 +235,7 @@ class MLPNetwork(nn.Module):
         self.hidden_dim = hidden_dim
         self.device = device
         
-        self.network = nn.Sequential(
+        self.network1 = nn.Sequential(
             nn.Linear(self.input_dim, self.hidden_dim),
             nn.LeakyReLU(),
             nn.Dropout(dropout),
@@ -192,17 +250,32 @@ class MLPNetwork(nn.Module):
             # nn.Dropout(dropout),
             # nn.Linear(self.hidden_dim, obs_dim)
         ).to(device)
+        self.network2= nn.Sequential(
+            nn.Linear(self.input_dim, self.hidden_dim),
+            nn.LeakyReLU(),
+            nn.Dropout(dropout),
+            # nn.Linear(self.hidden_dim, self.hidden_dim),
+            # nn.ReLU(),
+            # nn.Dropout(dropout),
+            # nn.Linear(self.hidden_dim, self.hidden_dim),
+            # nn.ReLU(),
+            # nn.Dropout(dropout),
+            # nn.Linear(self.hidden_dim, obs_dim)
+        ).to(device)
+
         self.obs_head = nn.Linear(hidden_dim, obs_dim).to(device)
         self.rew_head = nn.Linear(hidden_dim, 1).to(device)  
     def forward(self, x):
-        h = self.network(x)
-        next_obs = self.obs_head(h)
-        reward = self.rew_head(h)
+        h1 = self.network1(x)
+        h2 = self.network2(x)
+
+        next_obs = self.obs_head(h1)
+        reward = self.rew_head(h2)
         return next_obs, reward.squeeze(-1)
     
     @torch.no_grad()
     def predict_multiple(self, x, num_samples=10):
-        input = torch.repeat(x, num_samples,1) #changed torch to numpy
+        input = np.repeat(x, num_samples,1) #changed torch to numpy
         predictions, reward_preds = self.forward(input)
         return predictions, reward_preds 
     
@@ -215,7 +288,7 @@ def main(args, dataset=None):
     print("finished training")
     if args.noisy:
         args.env_name = args.env_name + "_noisy"
-    model.save_model(f"saved_models/{args.env_name}/transition_world_model_{loss:.2f}_{args.n}.pth")
+    model.save_model(f"saved_models/{args.env_name}/transition_world_model_v2_{loss:.2f}_{args.n}.pth")
     print("saved model")
     
 if __name__ == "__main__":

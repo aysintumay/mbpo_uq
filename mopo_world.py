@@ -11,7 +11,7 @@ from matplotlib import pyplot as plt
 import pickle
 import gym 
 from tqdm import tqdm
-# from torch.utils.tensorboard import SummaryWriter
+from torch.utils.tensorboard import SummaryWriter
 
 # from algo.mbpo import evaluate as evaluate_mbpo
 from test import test
@@ -169,14 +169,14 @@ def main(args):
         log_path = os.path.join(args.logdir, args.task, args.algo_name, log_file)
 
         model_path = os.path.join(args.model_path, args.task, args.algo_name, log_file)
-        # writer = SummaryWriter(log_path)
-        # writer.add_text("args", str(args))
-        # logger = Logger(writer=writer,log_path=log_path)
-        # model_logger = Logger(writer=writer,log_path=model_path)
-        # util.logger_model.log_path = "saved_models"
+        writer = SummaryWriter(log_path)
+        writer.add_text("args", str(args))
+        logger = Logger(writer=writer,log_path=log_path)
+        model_logger = Logger(writer=writer,log_path=model_path)
+        # util.logger_model.log_path = model_path
         Devid = args.devid if args.device == 'cuda' else -1
-        # set_device_and_logger(Devid, logger, model_logger)
-        set_global_device(f'cuda:{Devid}')
+        set_device_and_logger(Devid, logger, model_logger)
+        # set_global_device(f'cuda:{Devid}')
         args.model_path = model_path
         args.pretrained = True #to be fast
         args.data_name = 'train'

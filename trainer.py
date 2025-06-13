@@ -93,43 +93,45 @@ class Trainer:
                     num_timesteps += 1
                     t.update(1)
             # evaluate current policy
-            # if e % 50 == 0:
-            #     if self.eval_env.id == 'Abiomed-v0':
-            #         eval_info, _ = self.evaluate()
-            #         ep_reward_mean, ep_reward_std = np.mean(eval_info["eval/episode_reward"]), np.std(eval_info["eval/episode_reward"])
-            #         ep_length_mean, ep_length_std = np.mean(eval_info["eval/episode_length"]), np.std(eval_info["eval/episode_length"])
-            #         ep_accuracy_mean, ep_accuracy_std = np.mean(eval_info["eval/episode_accuracy"]), np.std(eval_info["eval/episode_accuracy"])
-            #         ep_1_off_accuracy_mean, ep_1_off_accuracy_std = np.mean(eval_info["eval/episode_1_off_accuracy"]), np.std(eval_info["eval/episode_1_off_accuracy"])
-            #         ep_mse_mean, ep_mse_std = np.mean(eval_info["eval/mse"]), np.std(eval_info["eval/mse"])
-            #         acc_l.append(ep_accuracy_mean)
-            #         off_acc.append(ep_1_off_accuracy_mean)
-            #         acc_std_l.append(ep_accuracy_std)
-            #         off_acc_std.append(ep_1_off_accuracy_std)
-            #         self.logger.record("eval/episode_accuracy", ep_accuracy_mean, num_timesteps, printed=False)
-            #         self.logger.record("eval/episode_1_off_accuracy", ep_1_off_accuracy_mean, num_timesteps, printed=False)
-            #         self.logger.record("eval/mse", ep_mse_mean, num_timesteps, printed=False)
-            #         self.logger.print(f"Epoch #{e}: episode_accuracy: {ep_accuracy_mean:.3f} ± {ep_accuracy_std:.3f},\
-            #                         episode_1_off_accuracy: {ep_1_off_accuracy_mean:.3f} ± {ep_1_off_accuracy_std:.3f}"
-            #                         )
-            #     else:
-            #         eval_info,_ = self._evaluate()
+            if e % 20 == 0:
+                if self.eval_env.id == 'Abiomed-v0':
+                    eval_info, _ = self.evaluate()
+                    ep_reward_mean, ep_reward_std = np.mean(eval_info["eval/episode_reward"]), np.std(eval_info["eval/episode_reward"])
+                    ep_length_mean, ep_length_std = np.mean(eval_info["eval/episode_length"]), np.std(eval_info["eval/episode_length"])
+                    ep_accuracy_mean, ep_accuracy_std = np.mean(eval_info["eval/episode_accuracy"]), np.std(eval_info["eval/episode_accuracy"])
+                    ep_1_off_accuracy_mean, ep_1_off_accuracy_std = np.mean(eval_info["eval/episode_1_off_accuracy"]), np.std(eval_info["eval/episode_1_off_accuracy"])
+                    ep_mse_mean, ep_mse_std = np.mean(eval_info["eval/mse"]), np.std(eval_info["eval/mse"])
+                    acc_l.append(ep_accuracy_mean)
+                    off_acc.append(ep_1_off_accuracy_mean)
+                    acc_std_l.append(ep_accuracy_std)
+                    off_acc_std.append(ep_1_off_accuracy_std)
+                    print("eval/episode_accuracy", ep_accuracy_mean, num_timesteps, printed=False)
+                    print("eval/episode_1_off_accuracy", ep_1_off_accuracy_mean, num_timesteps, printed=False)
+                    print("eval/mse", ep_mse_mean, num_timesteps, printed=False)
+                    print(f"Epoch #{e}: episode_accuracy: {ep_accuracy_mean:.3f} ± {ep_accuracy_std:.3f},\
+                                    episode_1_off_accuracy: {ep_1_off_accuracy_mean:.3f} ± {ep_1_off_accuracy_std:.3f}"
+                                    )
+                else:
+                    eval_info = self._evaluate()
                     
-            #         ep_reward_mean, ep_reward_std = np.mean(eval_info["eval/episode_reward"]), np.std(eval_info["eval/episode_reward"])
-            #         ep_length_mean, ep_length_std = np.mean(eval_info["eval/episode_length"]), np.std(eval_info["eval/episode_length"])
+                    ep_reward_mean, ep_reward_std = np.mean(eval_info["eval/episode_reward"]), np.std(eval_info["eval/episode_reward"])
+                    ep_length_mean, ep_length_std = np.mean(eval_info["eval/episode_length"]), np.std(eval_info["eval/episode_length"])
                 
                     
-            #     reward_l.append(ep_reward_mean)
-            #     reward_std_l.append(ep_reward_std)
+                reward_l.append(ep_reward_mean)
+                reward_std_l.append(ep_reward_std)
                 
-            #     self.logger.record("eval/episode_reward", ep_reward_mean, num_timesteps, printed=False)
-            #     self.logger.record("eval/episode_length", ep_length_mean, num_timesteps, printed=False)
+                # print("eval/episode_reward", ep_reward_mean, num_timesteps, printed=False)
+                # print("eval/episode_length", ep_length_mean, num_timesteps, printed=False)
+                print("eval/episode_reward", ep_reward_mean, num_timesteps)
+                print("eval/episode_length", ep_length_mean, num_timesteps)
 
-            #     self.logger.print(f"Epoch #{e}: episode_reward: {ep_reward_mean:.3f} ± {ep_reward_std:.3f},\
-            #                     episode_length: {ep_length_mean:.3f} ± {ep_length_std:.3f}"
-            #                     )
+                print(f"Epoch #{e}: episode_reward: {ep_reward_mean:.3f} ± {ep_reward_std:.3f},\
+                                episode_length: {ep_length_mean:.3f} ± {ep_length_std:.3f}"
+                                )
             
             # save policy
-            model_save_dir = 'saved_models'
+            model_save_dir = util.logger_model.log_path
             if not os.path.exists(model_save_dir):
                 os.makedirs(model_save_dir)
             policy_copy = copy.deepcopy(self.algo.policy)
@@ -152,116 +154,147 @@ class Trainer:
 
         print("total time: {:.3f}s".format(time.time() - start_time))
         
-
-
-    def _evaluate(self, dataset, world_model, args):
-
+    def _evaluate(self):
         self.algo.policy.eval()
-        self.eval_env.reset()
-
-        eval_ep_info = []
+        obs = self.eval_env.reset()
+        eval_ep_info_buffer = []
+        num_episodes = 0
         episode_reward, episode_length = 0, 0
 
-        batch_size = args.batch_size_generation
-        num_samples = args.num_samples
-        obs_dim = dataset['observations'].shape[1]
-        total_batches = len(dataset['observations']) // batch_size
+        while num_episodes < self._eval_episodes:
+            action = self.algo.policy.sample_action(obs, deterministic=True)
+            next_obs, reward, terminal, _ = self.eval_env.step(action) #next_obs = world model forecast
+            episode_reward += reward
+            episode_length += 1
 
-        data_buffer = {
-            'observations': [],
-            'actions': [],
-            'rewards': [],
-            'terminals': [],
-            'next_observations': [],
-            'raw_rewards': [],
-        }
+            obs = next_obs  #next_obs = world model forecast
 
-        for i in tqdm.tqdm(range(total_batches)):
+            if terminal:
+                eval_ep_info_buffer.append(
+                    {"episode_reward": episode_reward, "episode_length": episode_length}
+                )
 
-            start_idx = i * batch_size
-            end_idx = (i + 1) * batch_size
+                #d4rl don't have REF_MIN_SCORE and REF_MAX_SCORE for v2 environments
+                dset_name = self.eval_env.unwrapped.spec.name+'-v0'
+                # self.logger.print( f"normalized score: {d4rl.get_normalized_score(dset_name, np.array(episode_reward))*100}")
 
-            obs_batch = dataset['observations'][start_idx:end_idx]
-            action_batch = self.algo.policy.sample_action(obs_batch, deterministic=True)
-            #step does not support batch
-            
-            next_obs_batch = np.zeros_like(obs_batch)
-            reward_batch = np.zeros(batch_size)
-            terminal_batch = np.zeros(batch_size, dtype=bool)
-            info_batch = [{} for _ in range(batch_size)]
-            
-            # Step environment sequentially for each action in the batch
-            for j in range(batch_size):
-                # Process one environment step at a time
-                next_obs, reward, terminal, info = self.eval_env.step(action_batch[j])
-                
-                # Store results
-                next_obs_batch[j] = next_obs
-                reward_batch[j] = reward
-                terminal_batch[j] = terminal
-                info_batch[j] = info            
+                num_episodes +=1
+                episode_reward, episode_length = 0, 0
+                obs = self.eval_env.reset()
 
-            states = np.repeat(obs_batch, num_samples, axis=0)
-            actions = np.repeat(action_batch, num_samples, axis=0)
-
-            pred_input = torch.FloatTensor(np.concatenate([states, actions],axis = 1)).to(world_model.device)
-
-            next_obs_samples = world_model.model(pred_input).detach().cpu().numpy() 
-       
-            # Reshape to [batch_size, num_samples, obs_dim]
-            obs_dim = obs_batch.shape[1]
-            next_obs_samples = next_obs_samples.reshape(batch_size, num_samples, obs_dim)
-            
-            next_obs_means = world_model.predict(obs_batch, action_batch)  #if use the next_obs_batch instead of the predicted next_obs
-
-            # Calculate standard deviation across samples for each batch item
-            batch_stds = np.std(next_obs_samples, axis=1).mean(axis=1)
-
-            penalized_rewards = reward_batch - args.crps_scale * batch_stds
-            # penalized_rewards = reward_batch
-            # next_obs_means = next_obs_batch #if use the next_obs_batch instead of the predicted next_obs
-
-            # Accumulate data
-            data_buffer['observations'].append(obs_batch)
-            data_buffer['actions'].append(action_batch)
-            data_buffer['rewards'].append(penalized_rewards)
-            data_buffer['terminals'].append(terminal_batch)
-            data_buffer['next_observations'].append(next_obs_means)
-            data_buffer['raw_rewards'].append(reward_batch)
-
-
-            # Record completed episodes
-            episode_reward += np.sum(penalized_rewards)
-            episode_length += batch_size
-            for done in terminal_batch:
-                if done:
-                    eval_ep_info.append({
-                        "episode_reward": episode_reward,
-                        "episode_length": episode_length,
-                    })
-                    episode_reward, episode_length = 0, 0
-
-        
-        # Combine batches
-        dataset = {
-            key: np.concatenate(data_buffer[key], axis=0)
-            for key in ['observations', 'actions', 'rewards', 'terminals', 'next_observations']
-        }
-           
-        #rewards without std penalty using D_1
-        # with open(f'/data/abiomed_tmp/intermediate_data_d4rl/raw_rewards_{args.task}_{args.crps_scale}_{self.iter}.pkl', 'wb') as f:
-        #     np.save(f, np.array(raw_reward_))
-        # #rewards with penalty using D_1
-        # with open(f'/data/abiomed_tmp/intermediate_data_d4rl/rewards_{args.task}_{args.crps_scale}_{self.iter}.pkl', 'wb') as f:
-        #     np.save(f, np.array(reward_))
-        # #save crps list
-        # with open(f'/data/abiomed_tmp/intermediate_data_d4rl/std_list_{args.task}_{args.crps_scale}_{self.iter}.pkl', 'wb') as f:
-        #     np.save(f, np.array(std_list))
-        
         return {
-            "eval/episode_reward": [ep_info["episode_reward"] for ep_info in eval_ep_info],
-            "eval/episode_length": [ep_info["episode_length"] for ep_info in eval_ep_info]
-        }, dataset
+            "eval/episode_reward": [ep_info["episode_reward"] for ep_info in eval_ep_info_buffer],
+            "eval/episode_length": [ep_info["episode_length"] for ep_info in eval_ep_info_buffer]
+        }
+
+    # def _evaluate(self, dataset, world_model, args):
+
+    #     self.algo.policy.eval()
+    #     self.eval_env.reset()
+
+    #     eval_ep_info = []
+    #     episode_reward, episode_length = 0, 0
+
+    #     batch_size = args.batch_size_generation
+    #     num_samples = args.num_samples
+    #     obs_dim = dataset['observations'].shape[1]
+    #     total_batches = len(dataset['observations']) // batch_size
+
+    #     data_buffer = {
+    #         'observations': [],
+    #         'actions': [],
+    #         'rewards': [],
+    #         'terminals': [],
+    #         'next_observations': [],
+    #         'raw_rewards': [],
+    #     }
+
+    #     for i in tqdm.tqdm(range(total_batches)):
+
+    #         start_idx = i * batch_size
+    #         end_idx = (i + 1) * batch_size
+
+    #         obs_batch = dataset['observations'][start_idx:end_idx]
+    #         action_batch = self.algo.policy.sample_action(obs_batch, deterministic=True)
+    #         #step does not support batch
+            
+    #         next_obs_batch = np.zeros_like(obs_batch)
+    #         reward_batch = np.zeros(batch_size)
+    #         terminal_batch = np.zeros(batch_size, dtype=bool)
+    #         info_batch = [{} for _ in range(batch_size)]
+            
+    #         # Step environment sequentially for each action in the batch
+    #         for j in range(batch_size):
+    #             # Process one environment step at a time
+    #             next_obs, reward, terminal, info = self.eval_env.step(action_batch[j])
+                
+    #             # Store results
+    #             next_obs_batch[j] = next_obs
+    #             reward_batch[j] = reward
+    #             terminal_batch[j] = terminal
+    #             info_batch[j] = info            
+
+    #         states = np.repeat(obs_batch, num_samples, axis=0)
+    #         actions = np.repeat(action_batch, num_samples, axis=0)
+
+    #         pred_input = torch.FloatTensor(np.concatenate([states, actions],axis = 1)).to(world_model.device)
+
+    #         next_obs_samples = world_model.model(pred_input).detach().cpu().numpy() 
+       
+    #         # Reshape to [batch_size, num_samples, obs_dim]
+    #         obs_dim = obs_batch.shape[1]
+    #         next_obs_samples = next_obs_samples.reshape(batch_size, num_samples, obs_dim)
+            
+    #         next_obs_means = world_model.predict(obs_batch, action_batch)  #if use the next_obs_batch instead of the predicted next_obs
+
+    #         # Calculate standard deviation across samples for each batch item
+    #         batch_stds = np.std(next_obs_samples, axis=1).mean(axis=1)
+
+    #         penalized_rewards = reward_batch - args.crps_scale * batch_stds
+    #         # penalized_rewards = reward_batch
+    #         # next_obs_means = next_obs_batch #if use the next_obs_batch instead of the predicted next_obs
+
+    #         # Accumulate data
+    #         data_buffer['observations'].append(obs_batch)
+    #         data_buffer['actions'].append(action_batch)
+    #         data_buffer['rewards'].append(penalized_rewards)
+    #         data_buffer['terminals'].append(terminal_batch)
+    #         data_buffer['next_observations'].append(next_obs_means)
+    #         data_buffer['raw_rewards'].append(reward_batch)
+
+
+    #         # Record completed episodes
+    #         episode_reward += np.sum(penalized_rewards)
+    #         episode_length += batch_size
+    #         for done in terminal_batch:
+    #             if done:
+    #                 eval_ep_info.append({
+    #                     "episode_reward": episode_reward,
+    #                     "episode_length": episode_length,
+    #                 })
+    #                 episode_reward, episode_length = 0, 0
+
+        
+    #     # Combine batches
+    #     dataset = {
+    #         key: np.concatenate(data_buffer[key], axis=0)
+    #         for key in ['observations', 'actions', 'rewards', 'terminals', 'next_observations']
+    #     }
+           
+    #     #rewards without std penalty using D_1
+    #     # with open(f'/data/abiomed_tmp/intermediate_data_d4rl/raw_rewards_{args.task}_{args.crps_scale}_{self.iter}.pkl', 'wb') as f:
+    #     #     np.save(f, np.array(raw_reward_))
+    #     # #rewards with penalty using D_1
+    #     # with open(f'/data/abiomed_tmp/intermediate_data_d4rl/rewards_{args.task}_{args.crps_scale}_{self.iter}.pkl', 'wb') as f:
+    #     #     np.save(f, np.array(reward_))
+    #     # #save crps list
+    #     # with open(f'/data/abiomed_tmp/intermediate_data_d4rl/std_list_{args.task}_{args.crps_scale}_{self.iter}.pkl', 'wb') as f:
+    #     #     np.save(f, np.array(std_list))
+        
+    #     return {
+    #         "eval/episode_reward": [ep_info["episode_reward"] for ep_info in eval_ep_info],
+    #         "eval/episode_length": [ep_info["episode_length"] for ep_info in eval_ep_info]
+    #     }, dataset
 
    
 
