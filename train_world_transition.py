@@ -108,7 +108,9 @@ def train(run, seed, args):
 
     #we load the world model as the transition model here
     dynamics_model = D4RLWorldModel(args.task)
+
     dynamics_model.load_model(args.transition_model_path)
+    dynamics_model.scale  = args.reward_penalty_coef
 
     # create buffer
     offline_buffer = ReplayBuffer(

@@ -62,6 +62,11 @@ Saved model naming convention:
 - 0.01: train loss at the last epoch rounded up to 2nd decimal point.
 - 0.0, 0.1, etc: noise level
 
+# Train MOPO with world model and std penalty
+
+```
+python mopo_world.py --algo-name mopo --transition_model_path "saved_models/hopper-expert-v0_noisy/transition_world_model_v2_0.00_0.0.pth" --task hopper-expert-v0 --reward-penalty-coef 0.01 --epoch 100 --devid 1
+```
 
 
 
