@@ -17,7 +17,7 @@ from torch.utils.tensorboard import SummaryWriter
 from test import test
 from train import train
 from common.buffer import ReplayBuffer
-from scoring import convert_tfenvents_to_csv, merge_csv
+from helpers.scoring import convert_tfenvents_to_csv, merge_csv
 from common.logger import Logger
 from trainer import Trainer
 from common.util import set_device_and_logger

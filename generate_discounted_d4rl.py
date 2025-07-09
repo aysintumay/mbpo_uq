@@ -7,7 +7,7 @@ from tqdm import tqdm
 import argparse
 from common.normalizer import StandardNormalizer
 from common import util
-import scoring
+import helpers.scoring as scoring
 import os
 
 model_paths = {

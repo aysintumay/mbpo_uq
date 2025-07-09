@@ -5,7 +5,7 @@ from gym import spaces
 import numpy as np
 import torch
 from tqdm import tqdm
-import scoring
+import helpers.scoring as scoring
 from sklearn.preprocessing import MinMaxScaler
 
 from common.buffer import ReplayBuffer

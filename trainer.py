@@ -8,7 +8,7 @@ from matplotlib import pyplot as plt
 from tqdm import tqdm
 import copy 
 from common import util
-from plotter import *
+from helpers.plotter import *
 
 
 

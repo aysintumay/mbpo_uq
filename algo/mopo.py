@@ -65,6 +65,10 @@ class MOPO:
             # starttime = time.time()
             # print(self._rollout_batch_size)
             next_observations, rewards, terminals, infos = self.dynamics_model.predict(observations, actions)
+            print("Output specs:", next_observations.max(), next_observations.min(), rewards.max(), rewards.min())
+            print("Input specs:", observations.max(), observations.min(), actions.max(), actions.min())
+
+
             # print('rollout pred time', starttime - time.time())
             self.model_buffer.add_batch(observations, next_observations, actions, rewards, terminals)
             nonterm_mask = (~terminals).flatten()

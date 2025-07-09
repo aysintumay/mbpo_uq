@@ -44,7 +44,6 @@ class D4RLWorldModel:
         set_global_device(device)
         util.device = device
 
-        self.scale = 0.1
         self.epochs = epochs
         self.obs_dim = self.env.observation_space.shape[0]
         self.action_dim = self.env.action_space.shape[0]
@@ -68,7 +67,9 @@ class D4RLWorldModel:
         # Training parameters
         self.holdout_ratio = holdout_ratio
         self.model_train_timesteps = 0
-        self.scale = scale
+        self.reward_penalty_coef = scale
+        self.static_fns = importlib.import_module(f"static_fns.{env_name.split('-')[0]}").StaticFns
+
         
     def train_model(self, data=None):
         if data is None:
@@ -99,8 +100,7 @@ class D4RLWorldModel:
         # actions = self.act_normalizer.transform(actions)
         # next_obs = self.obs_normalizer.transform(next_obs)
        
-        # make torch dataset and ba
-        # tch
+       
         dataset = torch.utils.data.TensorDataset(obs, actions, next_obs, rewards)
         dataloader = torch.utils.data.DataLoader(dataset, batch_size=256, shuffle=True)
 
@@ -152,35 +152,28 @@ class D4RLWorldModel:
         return l
          
 
-    def predict(self, obs, action, uq=True, num_samples=50, batch_size =50):
-        """Predict next state given current state and action"""
-        import_path = f"static_fns.hopper"
-        static_fns = importlib.import_module(import_path).StaticFns
-        if uq is not None:
-            self.model.train()
-        else:
-            self.model.eval()
+    def predict(self, obs, action, num_samples=50, batch_size =50):
+        """Return next state, rewards, terminal given current state and action"""
+        
+            
         with torch.no_grad():
             obs = torch.FloatTensor(obs).to(self.device)
             action = torch.FloatTensor(action).to(self.device)
-            if uq is None:
+            if self.reward_penalty_coef == 0:
+                self.model.eval()
                 # Normalize inputs
                 # obs = self.obs_normalizer.transform(obs)
                 # action = self.act_normalizer.transform(action)
                 # Predict
                 # print('no uq')
-                pred_next_obs, pred_reward = self.model(torch.cat([obs, action], dim=1))
+                all_preds, reward_preds = self.model(torch.cat([obs, action], dim=1))
                 # Denormalize output
                 # pred_next_obs = self.obs_normalizer.inverse_transform(pred_next_obs)
-                
+                info = None
                 
             else:
-
-                batch_size  = batch_size
-
+                self.model.train()
                 total_batches = len(obs) // batch_size
-               
-               
                 all_preds = []
                 reward_preds = []
                 all_stds = []
@@ -210,7 +203,7 @@ class D4RLWorldModel:
                     # print("penalty", batch_stds_max)
                     # print("batch_stds_max shape: ", batch_stds_max.shape) #[samples]
 
-                    penalized_rewards = next_reward.reshape(-1,1) - self.scale * batch_stds_max.reshape(-1,1)
+                    penalized_rewards = next_reward.reshape(-1,1) - self.reward_penalty_coef * batch_stds_max.reshape(-1,1)
                     # print(penalized_rewards.shape)
                     # print("base rewards: ", next_reward[:3])
                     # print("penalized rewards: ", penalized_rewards[:3])
@@ -223,6 +216,7 @@ class D4RLWorldModel:
                     reward_preds.append(pred_reward)
                     all_stds.append(batch_stds_max)
                     base_rewards.append(next_reward)
+
                 if total_batches*batch_size < len(obs): 
                     state_np = obs[total_batches*batch_size: ]
                     action_np = action[total_batches*batch_size: ]
@@ -238,11 +232,9 @@ class D4RLWorldModel:
 
                     # # Calculate standard deviation across samples for each batch item
                     batch_stds = next_obs_samples.std(axis=0) #shape [samples,features] 
-                    
                     batch_stds_max = batch_stds.max(axis=1, keepdims=True)[0]
                     
-
-                    penalized_rewards = next_reward.reshape(-1,1) - self.scale * batch_stds_max.reshape(-1,1)
+                    penalized_rewards = next_reward.reshape(-1,1) - self.reward_penalty_coef * batch_stds_max.reshape(-1,1)
                     # print(penalized_rewards.shape)
 
                     pred_reward = penalized_rewards
@@ -253,19 +245,15 @@ class D4RLWorldModel:
                     base_rewards.append(next_reward)
 
 
-            all_preds = torch.cat(all_preds, dim=0)
-            reward_preds = torch.cat(reward_preds, dim=0)
-            all_stds = torch.cat(all_stds, dim=0)
-            base_rewards = torch.cat(base_rewards, dim=0)
-            terminals = static_fns.termination_fn(obs.detach().cpu().numpy(), action.detach().cpu().numpy(), all_preds.detach().cpu().numpy())
+                all_preds = torch.cat(all_preds, dim=0)
+                reward_preds = torch.cat(reward_preds, dim=0)
+                all_stds = torch.cat(all_stds, dim=0)
+                base_rewards = torch.cat(base_rewards, dim=0)
+                info  = (all_stds, base_rewards)
+
+            terminals = self.static_fns.termination_fn(obs.detach().cpu().numpy(), action.detach().cpu().numpy(), all_preds.detach().cpu().numpy())
             terminals = terminals[:, None]
-        return all_preds.cpu().numpy(), reward_preds.cpu().numpy().reshape(-1,1), terminals, (all_stds, base_rewards)
-
-
-    # def crps(self, x, y):
-    #     #calculate crps for a single sample
-    #     y_hat = self.model.predict_multiple(x)
-    #     return self.model.crps(x, y)
+        return all_preds.cpu().numpy(), reward_preds.cpu().numpy().reshape(-1,1), terminals, info
     
     def save_model(self, path):
         """Save model and normalizers"""
@@ -347,10 +335,23 @@ def main(args, dataset=None):
     model = D4RLWorldModel(env_name=args.env_name, dataset = dataset, device=args.device, epochs=args.epochs)
     loss = model.train_model()
     print("finished training")
-    if args.noisy:
+     
+    if args.n != 0.00:
         args.env_name = args.env_name + "_noisy"
-    model.save_model(f"saved_models/{args.env_name}/transition_world_model_v2_{loss:.2f}_{args.n}.pth")
-    print("saved model")
+    savedir = f"saved_models/{args.env_name}/transition_world_model_v2_{loss:.2f}_{args.n}"
+
+    if 'action_noisy_added' in args.data_path:
+        savedir = savedir + "_action_noisy_added"
+    elif '_action_obs_noisy' in args.data_path:
+        savedir = savedir + "_action_obs_noisy"
+    elif '_obs_noisy' in args.data_path:
+        savedir = savedir + "_obs_noisy"
+    else:
+        savedir = savedir
+
+    model.save_model(savedir)
+
+    print(f"saved model in {savedir}")
     
 if __name__ == "__main__":
     # get argument
@@ -359,6 +360,7 @@ if __name__ == "__main__":
     parser.add_argument("--device", type=str, default="cuda:0")
     parser.add_argument("--epochs", type=int, default=80)
     parser.add_argument("--data_path", type=str, default="")
+
     parser.add_argument("--n", type=float, default=0.00)
 
     
@@ -371,7 +373,7 @@ if __name__ == "__main__":
     # parser.add_argument("--seed", type=int, default=42, help="random seed for reproducibility")
 
     args = parser.parse_args()
-    args.noisy = True
+    # args.noisy = True
     
  
     print()

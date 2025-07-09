@@ -127,7 +127,7 @@ def main(args):
     data_path = args.data_path
     noise_level = args.noise
 
-    env_name = "hopper-expert-v0"
+    env_name = args.env
     env = gym.make(env_name)
 
     # 1) Load or fetch dataset
@@ -158,7 +158,6 @@ def main(args):
     )
     offline_buffer.load_dataset(dataset)
 
-    # 3) Build hyperparameters for the transition model
     transition_params = {
         "model_batch_size": 256,
         "use_weight_decay": True,
@@ -182,7 +181,6 @@ def main(args):
         },
     }
 
-    # If you need MOPO parameters, you can merge them here (but they are unused in this script)
     mopo_params = {
         "max_epoch": 125,
         "rollout_batch_size": 50000,
@@ -201,7 +199,6 @@ def main(args):
     }
     params = {**transition_params, **mopo_params}
 
-    # 4) Instantiate the transition model
     task = env_name.split("-")[0]  # e.g. "hopper"
     import_path = f"static_fns.{task}"
     static_fns = importlib.import_module(import_path).StaticFns
@@ -215,11 +212,10 @@ def main(args):
         **transition_params,
     )
 
-    # 5) Train
     trained_model, obs_normalizer, act_normalizer = learn_dynamics(transition_model, offline_buffer, params, args.device)
     if args.noise > 0:
         env_name =  env_name+"_noisy"
-    # 6) Save under dynamics_model_{noise_level}.pt
+
     save_dir = os.path.join("saved_models", env_name)
     os.makedirs(save_dir, exist_ok=True)
 
@@ -240,6 +236,9 @@ if __name__ == "__main__":
         description="Train a dynamics model on a D4RL dataset (e.g. Hopper)."
     )
     parser.add_argument("--device", type=str, default="cuda:0")
+    parser.add_argument(
+        "--env", type=str, default='',
+    )
     parser.add_argument(
         "--noise",
         type=float,
